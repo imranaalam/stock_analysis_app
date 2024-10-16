@@ -58,6 +58,7 @@ def is_past_five_pm():
     current_time = datetime.now(timezone)
     return current_time.hour >= 17
 
+
 def synchronize_database_ui(conn):
     """
     Streamlit UI for synchronizing the database.
@@ -89,7 +90,7 @@ def synchronize_database_ui(conn):
                 
                 # Run synchronization
                 with st.spinner('Full synchronization in progress...'):
-                    # Call the synchronize_database function with the correct date
+                    # Call the existing synchronize_database function with the correct date
                     summary = synchronize_database(conn, date_to_sync, progress_bar, status_text, log_container)
                 
                 st.success("✅ Full synchronization has completed. Check the summary below for details.")
@@ -100,39 +101,39 @@ def synchronize_database_ui(conn):
                 if summary:
                     # Constituents Data
                     st.markdown("#### PSX Constituents Data")
-                    if summary.get('constituents', {}).get('success'):
+                    if summary['constituents']['success']:
                         st.success(summary['constituents']['message'])
                     else:
-                        st.error(summary.get('constituents', {}).get('message', 'No data'))
+                        st.error(summary['constituents']['message'])
                     
                     # Market Watch Data
                     st.markdown("#### Market Watch Data")
-                    if summary.get('market_watch', {}).get('success'):
+                    if summary['market_watch']['success']:
                         st.success(summary['market_watch']['message'])
                     else:
-                        st.error(summary.get('market_watch', {}).get('message', 'No data'))
+                        st.error(summary['market_watch']['message'])
                     
                     # Existing Tickers Data
                     st.markdown("#### Existing Tickers Data")
-                    if summary.get('old_tickers', {}).get('success'):
+                    if summary['old_tickers']['success']:
                         st.success(summary['old_tickers']['message'])
-                        if summary['old_tickers'].get('errors'):
+                        if summary['old_tickers']['errors']:
                             st.warning(f"⚠️ Encountered errors with {len(summary['old_tickers']['errors'])} tickers.")
                             for error in summary['old_tickers']['errors']:
                                 st.write(error)
                     else:
-                        st.error(summary.get('old_tickers', {}).get('message', 'No data'))
+                        st.error(summary['old_tickers']['message'])
                     
                     # New Tickers Data
                     st.markdown("#### New Tickers Data")
-                    if summary.get('new_tickers', {}).get('success'):
+                    if summary['new_tickers']['success']:
                         st.success(summary['new_tickers']['message'])
-                        if summary['new_tickers'].get('errors'):
+                        if summary['new_tickers']['errors']:
                             st.warning(f"⚠️ Encountered errors with {len(summary['new_tickers']['errors'])} new tickers.")
                             for error in summary['new_tickers']['errors']:
                                 st.write(error)
                     else:
-                        st.error(summary.get('new_tickers', {}).get('message', 'No data'))
+                        st.error(summary['new_tickers']['message'])
                 else:
                     st.warning("⚠️ No synchronization summary available.")
             

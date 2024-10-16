@@ -22,17 +22,17 @@ Columns:
 Sampled Data from Tables:
 
 Table: Ticker
-Ticker       Date   Open   High    Low  Close  Change  Change (%)   Volume
-FATIMA 2023-06-09  27.75  28.95  27.75  28.45    0.75        2.71    35654
-  OGDC 2020-12-11 103.00 103.00 101.51 102.77    2.94        2.95  2905801
-   MCB 2023-11-06 142.07 144.98 142.07 143.06    0.99        0.70   394928
-  OGDC 2022-09-01  83.00  83.00  81.75  81.81   -0.39       -0.47  1153468
-  OGDC 2023-12-29 110.54 115.90 109.70 112.45    2.29        2.08 10443776
+Ticker       Date  Open  High   Low  Close  Change  Change (%)  Volume
+  OGDC 2023-09-05 95.80 95.95 93.54  93.87   -1.61       -1.69 3940168
+   PTC 2022-03-08  7.66  7.75  7.55   7.57   -0.09       -1.17  556500
+  HUBC 2020-07-27 77.20 78.75 76.00  77.67    0.58        0.75 2252104
+FATIMA 2020-12-02 28.18 28.20 27.80  28.03   -0.15       -0.53   48500
+   PTC 2024-07-29 12.10 12.50 12.05  12.27    0.17        1.40 5845036
 
 
 
-Database: tick_data.db
-=======================
+Database: tick_data - Copy.db
+==============================
 Table Structure:
 
 Table: Transactions
@@ -116,47 +116,166 @@ Sampled Data from Tables:
 
 Table: Transactions
       Date Settlement_Date Buyer_Code Seller_Code Symbol_Code            Company  Turnover   Rate       Value Transaction_Type
-2024-10-14      2024-10-16        187         187        HUBC      Hub Power Co.     20000  97.70   1954000.0              I2I
-2024-10-14      2024-10-16       None        None         UBL        United Bank    620364 299.65 185892073.0              B2B
-2024-10-14      2024-10-16        006         006        CWSM   Chakwal Spinning     10000  38.00    380000.0              I2I
+2024-10-14      2024-10-14        046         046        OGDC     Oil & Gas Dev.     14000 168.00   2352000.0              I2I
 2024-10-14      2024-10-16        194         194        ATRL Attock Refinery-XD     15000 344.14   5162100.0              I2I
-2024-10-14      2024-10-14        046         046        LUCK       Lucky Cement      2000 840.00   1680000.0              I2I
+2024-10-14      2024-10-15        102         102       UNITY    Unity Foods Ltd   4000000  25.26 101040000.0              I2I
+2024-10-14      2024-10-16        526         526        FCCL     Fauji CementXD    250000  30.85   7712500.0              I2I
+2024-10-14      2024-10-16       None        None        CWSM   Chakwal Spinning     50000  35.00   1750000.0              B2B
 
 
 Table: Portfolios
- Portfolio_ID Name  Stocks
-            6 geem     PSO
-            7  koo PSO,PPL
+ Portfolio_ID  Name Stocks
+           12  lldd    PPL
+           13  kaao    PPL
+           14 jrrep    PSO
+           11 ldddd    PPL
 
 
 Table: sqlite_sequence
       name  seq
-Portfolios    7
+Portfolios   14
 
 
 Table: PSXConstituents
-        ISIN SYMBOL                               COMPANY  PRICE   IDX_WT  FF_BASED_SHARES  FF_BASED_MCAP  ORD_SHARES  ORD_SHARES_MCAP  VOLUME
-PK0003301014   ATIL               Atlas Insurance Limited  42.00 0.056215         29883135   1.255092e+09   149415691     6.275459e+09   13026
-PK0060401012    KCL                Karam Ceramics Limited  64.88 0.008456         10184073   6.607427e+08    14549060     9.439430e+08       0
-PK0113801010    AGP                           AGP Limited 121.08 0.303695         84000000   1.017072e+10   280000000     3.390240e+10   66281
-PK0042601010   PRIC Progressive Insurance Company Limited   1.13 0.000086          3825000   4.322250e+06     8500000     9.605000e+06       0
-PK0010301015   DMTX            D.M. Textile Mills Limited  50.71 0.001387           915729   4.643662e+07     3052400     1.547872e+08       0
+        ISIN SYMBOL                                  COMPANY  PRICE   IDX_WT  FF_BASED_SHARES  FF_BASED_MCAP  ORD_SHARES  ORD_SHARES_MCAP  VOLUME
+PK0064901017   HCAR      Honda Atlas Cars (Pakistan) Limited 263.43 0.335056         28560000   7.523561e+09   142800000     3.761780e+10  743634
+PK0045001010    BOP                       The Bank of Punjab   5.44 0.158518       1381716184   7.516536e+09  3271569319     1.779734e+10 2289102
+PK0033301018   SITC       Sitara Chemical Industries Limited 298.09 0.056896          7500292   2.235762e+09    21429524     6.387927e+09    3705
+PK0014501016  ALNRS              Al-Noor Sugar Mills Limited  82.07 0.014966          6142111   5.040830e+08    20473702     1.680277e+09     238
+PK0126301016   PABC Pakistan Aluminium Beverage Cans Limited  77.64 0.249716         90277064   7.009111e+09   361108254     2.803644e+10   94749
 
 
 Table: Ticker
 Ticker       Date   Open   High    Low  Close  Change  Change (%)  Volume
-  INDU 2008-07-14 192.17 182.57 182.57 182.57   -9.60       -5.00     100
-  JDMT 2023-02-02  51.90  51.90  51.90  51.90    3.21        6.59     500
-  FHAM 2021-10-06  10.23  10.23  10.06  10.10   -0.12       -1.17  125000
-  HICL 2008-06-25  69.99  69.30  69.30  69.30   -0.69       -0.99     200
-  LUCK 2014-10-24 403.80 406.49 397.60 399.23   -2.80       -0.70  636800
+  NONS 2010-03-09  20.15  21.15  20.85  20.91    0.76        3.77    4035
+  PAEL 2009-05-06  20.54  21.30  20.75  20.98    0.44        2.14   50900
+  GTYR 2014-10-17 137.20 140.00 133.00 134.63   -0.35       -0.26  981500
+ TCORP 2020-01-31  23.02  23.02  23.02  23.02    1.20        5.50   77000
+   LCI 2004-02-27  82.60  83.05  80.05  81.10   -1.50       -1.82 1309400
 
 
 Table: MarketWatch
- SYMBOL         ISIN                         COMPANY                                   SECTOR LISTED IN   LDCP   OPEN   HIGH    LOW  CURRENT  CHANGE  CHANGE (%)   VOLUME  DEFAULTER DEFAULTING_CLAUSE  PRICE   IDX_WT  FF_BASED_SHARES  FF_BASED_MCAP   ORD_SHARES  ORD_SHARES_MCAP SYMBOL_SUFFIX Date  IS_INDEX
-    GOC PK0032301019              GOC (Pak) Limited.                            MISCELLANEOUS KMIALLSHR  58.60  58.00  58.00  57.87    58.60     NaN         NaN     12.0          0              None  58.60 0.003858        1102401.0   6.460070e+07    7348950.0     4.306485e+08          None None         0
- LSEFSL PK0104901019 LSE Financial Services Limited. INV. BANKS / INV. COS. / SECURITIES COS.    ALLSHR   4.20   4.15   4.50   4.02     4.20     NaN         NaN   7667.0          0              None   4.20 0.001342        7135516.0   2.996917e+07   35677578.0     1.498458e+08          None None         0
-LOTCHEM PK0077901012 Lotte Chemical Pakistan Limited                                 CHEMICAL    KSE100  17.04  17.02  17.26  17.02    17.19    0.15        0.88 639209.0          0              None  17.04 0.231133      378551802.0   6.450523e+09 1514207200.0     2.580209e+10          None None         0
- MACTER PK0113501016    Macter International Limited                          PHARMACEUTICALS KMIALLSHR 136.41 127.05 139.88 127.05   136.41     NaN         NaN    129.0          0              None 136.41 0.055979       16033856.0   2.187178e+09   45811018.0     6.249081e+09          None None         0
-   NRSL PK0056501015            Nimir Resins Limited                                 CHEMICAL    ALLSHR  23.07  22.51  22.70  22.41    22.50   -0.57       -2.47   7323.0          0              None  23.07 0.029205       56528426.0   1.304111e+09  141321100.0     3.260278e+09          None None         0
+SYMBOL         ISIN                           COMPANY                                   SECTOR LISTED IN    LDCP    OPEN    HIGH     LOW  CURRENT  CHANGE  CHANGE (%)     VOLUME  DEFAULTER    DEFAULTING_CLAUSE   PRICE   IDX_WT  FF_BASED_SHARES  FF_BASED_MCAP   ORD_SHARES  ORD_SHARES_MCAP SYMBOL_SUFFIX Date  IS_INDEX
+  MLCF PK0066201010 Maple Leaf Cement Factory Limited                                   CEMENT    ALLSHR   36.61   36.10   38.42   36.10    38.12    1.51        4.13 15836054.0          0                 None   36.61 0.341588      471403174.0   1.725807e+10 1047562608.0     3.835127e+10          None None         0
+  FDPL PK0063401019   First Dawood Properties Limited INV. BANKS / INV. COS. / SECURITIES COS.    ALLSHR    2.15    2.10    2.29    2.10     2.17    0.02        0.93   637753.0          0                 None    2.15 0.002842      133551021.0   2.871347e+08  148390023.0     3.190385e+08          None None         0
+   PIM PK0065501014          Popular Islamic Modaraba                                MODARABAS    ALLSHR   13.17   13.18   13.79   12.27    13.17     NaN         NaN       10.0          0                 None   13.17 0.002346        1400000.0   1.843800e+07   20000000.0     2.634000e+08          None None         0
+  PAKT PK0002701016  Pakistan Tobacco Company Limited                                  TOBACCO    KSE100 1030.03 1040.00 1102.00 1040.00  1101.45   71.42        6.93     4140.0          0                 None 1030.03 2.343979       12577980.0   1.295570e+10  255493792.0     2.631663e+11            XD None         0
+  MOHE PK0060901011             Mohib Exports Limited                                     None   DEFAULT     NaN     NaN     NaN     NaN      NaN     NaN         NaN        NaN          1 5.11.1.(c)(d)(e)(f)l    0.15 0.000020        6831000.0   1.024650e+06   15180000.0     2.277000e+06          None None         0
+
+
+
+Database: tick_data.db
+=======================
+Table Structure:
+
+Table: Ticker
+Columns:
+ - (0, 'Ticker', 'TEXT', 0, None, 1)
+ - (1, 'Date', 'TEXT', 0, None, 2)
+ - (2, 'Open', 'REAL', 0, None, 0)
+ - (3, 'High', 'REAL', 0, None, 0)
+ - (4, 'Low', 'REAL', 0, None, 0)
+ - (5, 'Close', 'REAL', 0, None, 0)
+ - (6, 'Change', 'REAL', 0, None, 0)
+ - (7, 'Change (%)', 'REAL', 0, None, 0)
+ - (8, 'Volume', 'INTEGER', 0, None, 0)
+
+Table: MarketWatch
+Columns:
+ - (0, 'SYMBOL', 'TEXT', 0, None, 1)
+ - (1, 'ISIN', 'TEXT', 0, None, 0)
+ - (2, 'COMPANY', 'TEXT', 0, None, 0)
+ - (3, 'SECTOR', 'TEXT', 0, None, 2)
+ - (4, 'LISTED_IN', 'TEXT', 0, None, 3)
+ - (5, 'LDCP', 'REAL', 0, None, 0)
+ - (6, 'OPEN', 'REAL', 0, None, 0)
+ - (7, 'HIGH', 'REAL', 0, None, 0)
+ - (8, 'LOW', 'REAL', 0, None, 0)
+ - (9, 'CURRENT', 'REAL', 0, None, 0)
+ - (10, 'CHANGE', 'REAL', 0, None, 0)
+ - (11, 'CHANGE (%)', 'REAL', 0, None, 0)
+ - (12, 'VOLUME', 'INTEGER', 0, None, 0)
+ - (13, 'DEFAULTER', 'BOOLEAN', 0, 'FALSE', 0)
+ - (14, 'DEFAULTING_CLAUSE', 'TEXT', 0, None, 0)
+ - (15, 'PRICE', 'REAL', 0, None, 0)
+ - (16, 'IDX_WT', 'REAL', 0, None, 0)
+ - (17, 'FF_BASED_SHARES', 'INTEGER', 0, None, 0)
+ - (18, 'FF_BASED_MCAP', 'REAL', 0, None, 0)
+ - (19, 'ORD_SHARES', 'INTEGER', 0, None, 0)
+ - (20, 'ORD_SHARES_MCAP', 'REAL', 0, None, 0)
+ - (21, 'SYMBOL_SUFFIX', 'TEXT', 0, None, 0)
+ - (22, 'Date', 'TEXT', 0, None, 0)
+
+Table: Transactions
+Columns:
+ - (0, 'Date', 'TEXT', 0, None, 1)
+ - (1, 'Settlement_Date', 'TEXT', 0, None, 0)
+ - (2, 'Buyer_Code', 'TEXT', 0, None, 3)
+ - (3, 'Seller_Code', 'TEXT', 0, None, 4)
+ - (4, 'Symbol_Code', 'TEXT', 0, None, 2)
+ - (5, 'Company', 'TEXT', 0, None, 0)
+ - (6, 'Turnover', 'INTEGER', 0, None, 0)
+ - (7, 'Rate', 'REAL', 0, None, 0)
+ - (8, 'Value', 'REAL', 0, None, 0)
+ - (9, 'Transaction_Type', 'TEXT', 0, None, 0)
+
+Table: Portfolios
+Columns:
+ - (0, 'Portfolio_ID', 'INTEGER', 0, None, 1)
+ - (1, 'Name', 'TEXT', 1, None, 0)
+ - (2, 'Stocks', 'TEXT', 1, None, 0)
+
+Table: sqlite_sequence
+Columns:
+ - (0, 'name', '', 0, None, 0)
+ - (1, 'seq', '', 0, None, 0)
+
+Table: PSXConstituents
+Columns:
+ - (0, 'ISIN', 'TEXT', 0, None, 1)
+ - (1, 'SYMBOL', 'TEXT', 0, None, 0)
+ - (2, 'COMPANY', 'TEXT', 0, None, 0)
+ - (3, 'PRICE', 'REAL', 0, None, 0)
+ - (4, 'IDX_WT', 'REAL', 0, None, 0)
+ - (5, 'FF_BASED_SHARES', 'INTEGER', 0, None, 0)
+ - (6, 'FF_BASED_MCAP', 'REAL', 0, None, 0)
+ - (7, 'ORD_SHARES', 'INTEGER', 0, None, 0)
+ - (8, 'ORD_SHARES_MCAP', 'REAL', 0, None, 0)
+ - (9, 'VOLUME', 'INTEGER', 0, None, 0)
+
+
+Sampled Data from Tables:
+
+Table: Ticker
+No data available.
+
+
+Table: MarketWatch
+SYMBOL         ISIN                          COMPANY                          SECTOR LISTED_IN     LDCP    OPEN    HIGH      LOW  CURRENT  CHANGE  CHANGE (%)    VOLUME  DEFAULTER    DEFAULTING_CLAUSE    PRICE   IDX_WT  FF_BASED_SHARES  FF_BASED_MCAP  ORD_SHARES  ORD_SHARES_MCAP SYMBOL_SUFFIX Date
+  TSML PK0058001014 Tandlianwala Sugar Mills Limited       SUGAR & ALLIED INDUSTRIES    ALLSHR    67.00    70.0    70.0    70.00    67.00     NaN         NaN       1.0          0                 None    67.00 0.070242        5885315.0   3.943161e+08 117706300.0     7.886322e+09          None None
+  EPQL PK0102701015  Engro Powergen Qadirpur Limited POWER GENERATION & DISTRIBUTION    ALLSHR    26.33    26.3    27.4    26.10    27.07    0.74        2.81 1059034.0          0                 None    26.33 0.075937       97140000.0   2.557696e+09 323800000.0     8.525654e+09          None None
+  ANNT PK0014701012     Annoor Textile Mills Limited                            None   DEFAULT      NaN     NaN     NaN      NaN      NaN     NaN         NaN       NaN          1 5.11.1.(c)(d)(e)(f)l    11.38 0.000177         784080.0   8.922830e+06   1742400.0     1.982851e+07          None None
+  INIL PK0028501010 International Industries Limited                     ENGINEERING    KSE100   159.36   162.0   163.0   155.00   157.84   -1.52       -0.95  448026.0          0                 None   159.36 0.187192       59346846.0   9.457513e+09 131881860.0     2.101669e+10          None None
+  UPFL PK0076901013  Unilever Pakistan Foods Limited   FOOD & PERSONAL CARE PRODUCTS KMIALLSHR 17477.45 17624.0 17650.0 17362.09 17634.00  156.55        0.90      75.0          0                 None 17477.45 0.991600         309432.0   5.408082e+09   6369932.0     1.113302e+11          None None
+
+
+Table: Transactions
+No data available.
+
+
+Table: Portfolios
+No data available.
+
+
+Table: sqlite_sequence
+No data available.
+
+
+Table: PSXConstituents
+        ISIN SYMBOL                        COMPANY  PRICE   IDX_WT  FF_BASED_SHARES  FF_BASED_MCAP  ORD_SHARES  ORD_SHARES_MCAP  VOLUME
+PK0064301010   GHGL            Ghani Glass Limited  25.20 0.224388        349900193   8.817485e+09   999714838     2.519281e+10  337998
+PK0005201014  FEROZ Ferozsons Laboratories Limited 289.92 0.112249         17387621   5.041019e+09    43469051     1.260255e+10   80987
+PK0021701013   FAEL     Fatima Enterprises Limited  14.30 0.001813          6403950   9.157648e+07    14231000     2.035033e+08       0
+PK0065101013   FIMM          First Imrooz Modaraba 141.00 0.003768           600000   8.460000e+07     3000000     4.230000e+08       0
+PK0014501016  ALNRS    Al-Noor Sugar Mills Limited  82.07 0.014966          6142111   5.040830e+08    20473702     1.680277e+09     238
 

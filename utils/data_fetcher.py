@@ -170,22 +170,20 @@ SECTOR_MAPPING = {
 
 
 
-
-
 def get_stock_data(ticker, date_from, date_to):
     """
     Fetches stock data from the Investors Lounge API for a given ticker and date range.
-    
+
     Args:
         ticker (str): The stock ticker symbol.
         date_from (str): Start date in 'DD MMM YYYY' format.
         date_to (str): End date in 'DD MMM YYYY' format.
-    
+
     Returns:
-        list: List of stock data dictionaries or None if failed.
+        list: A list of dictionaries containing stock data.
     """
     url = "https://www.investorslounge.com/Default/SendPostRequest"
-    
+
     headers = {
         "Accept": "*/*",
         "Accept-Language": "en-US,en;q=0.9,ps;q=0.8",
@@ -199,7 +197,7 @@ def get_stock_data(ticker, date_from, date_to):
         "Sec-Fetch-Site": "same-origin",
         "X-Requested-With": "XMLHttpRequest"
     }
-    
+
     payload = {
         "url": "PriceHistory/GetPriceHistoryCompanyWise",
         "data": json.dumps({
@@ -210,24 +208,30 @@ def get_stock_data(ticker, date_from, date_to):
             "key": ""
         })
     }
-    
+
     try:
         response = requests.post(url, headers=headers, json=payload, timeout=60)
         response.raise_for_status()
     except requests.exceptions.RequestException as e:
         logging.error(f"HTTP Request failed for ticker '{ticker}': {e}")
         return None
-    
+
     try:
         data = response.json()
         if not isinstance(data, list):
             logging.error(f"Unexpected JSON structure for ticker '{ticker}': Expected a list of records.")
             return None
+
+        # Log the first three rows for debugging
+        logging.info(f"First 3 records for ticker '{ticker}': {data[:3]}...")
+
         logging.info(f"Retrieved {len(data)} records for ticker '{ticker}'.")
         return data
     except json.JSONDecodeError:
         logging.error(f"Failed to parse JSON response for ticker '{ticker}'.")
         return None
+
+
 
 
 async def async_get_stock_data(session, ticker, date_from, date_to):
@@ -354,7 +358,7 @@ def fetch_kse_market_watch():
                 processed_item = {
                     'SYMBOL': columns[0].text.strip(),
                     'SECTOR': SECTOR_MAPPING.get(columns[1].text.strip(), 'Unknown'),
-                    'LISTED IN': columns[2].text.strip(),
+                    'LISTED_IN': columns[2].text.strip(),
                     'LDCP': float(columns[3].text.strip().replace(',', '')),
                     'OPEN': float(columns[4].text.strip().replace(',', '')),
                     'HIGH': float(columns[5].text.strip().replace(',', '')),
@@ -418,7 +422,7 @@ def get_defaulters_list():
             'CLEARING TYPE': clearing_type,
             'SHARES': shares,
             'FREE FLOAT': free_float,
-            'LISTED IN': listed_in,
+            'LISTED_IN': listed_in,
         })
 
     logging.info(f"Retrieved {len(defaulters_data)} records from defaulters list.")
@@ -478,7 +482,7 @@ def merge_data(market_data, listings_data, defaulters_data):
                 'SHARES': defaulter['SHARES'],
                 'FREE FLOAT': defaulter['FREE FLOAT'],
                 'DEFAULTING CLAUSE': defaulter['DEFAULTING CLAUSE'],
-                'LISTED IN': defaulter['LISTED IN'],
+                'LISTED_IN': defaulter['LISTED_IN'],
                 'CHANGE (%)': 0,  # default or unknown for this source
                 'CURRENT': 0,  # default or unknown for this source
                 'VOLUME': 0,  # default or unknown for this source
@@ -526,7 +530,7 @@ def get_listings_data():
             'CLEARING TYPE': clearing_type,
             'SHARES': shares,
             'FREE FLOAT': free_float,
-            'LISTED IN': listed_in,
+            'LISTED_IN': listed_in,
         })
 
     logging.info(f"Retrieved {len(listings_data)} records from listings data.")

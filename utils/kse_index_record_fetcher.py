@@ -696,7 +696,7 @@ def merge_data(market_data, listings_data, defaulters_data):
                 'SHARES': defaulter['SHARES'],
                 'FREE FLOAT': defaulter['FREE FLOAT'],
                 'DEFAULTING CLAUSE': defaulter['DEFAULTING CLAUSE'],
-                'LISTED IN': defaulter['LISTED IN'],
+                'LISTED_IN': defaulter['LISTED_IN'],
                 'CHANGE (%)': 0,  # default or unknown for this source
                 'CURRENT': 0,  # default or unknown for this source
                 'VOLUME': 0,  # default or unknown for this source
@@ -720,10 +720,10 @@ def get_stocks_by_index(conn):
         cursor = conn.cursor()
         # SQL query to get distinct symbols for each index
         query = """
-            SELECT "LISTED IN", GROUP_CONCAT(DISTINCT SYMBOL, ', ') as symbols
+            SELECT "LISTED_IN", GROUP_CONCAT(DISTINCT SYMBOL, ', ') as symbols
             FROM MarketWatch
-            GROUP BY "LISTED IN"
-            ORDER BY "LISTED IN";
+            GROUP BY "LISTED_IN"
+            ORDER BY "LISTED_IN";
         """
         cursor.execute(query)
         rows = cursor.fetchall()
@@ -785,7 +785,7 @@ def get_top_advancers(conn):
     try:
         cursor = conn.cursor()
         query = """
-            SELECT SYMBOL, SECTOR, "LISTED IN", "CHANGE (%)", CURRENT, VOLUME
+            SELECT SYMBOL, SECTOR, "LISTED_IN", "CHANGE (%)", CURRENT, VOLUME
             FROM MarketWatch
             ORDER BY "CHANGE (%)" DESC
             LIMIT 10;
@@ -798,7 +798,7 @@ def get_top_advancers(conn):
             advancers.append({
                 'SYMBOL': row[0],
                 'SECTOR': row[1],
-                'LISTED IN': row[2],
+                'LISTED_IN': row[2],
                 'CHANGE (%)': row[3],
                 'CURRENT': row[4],
                 'VOLUME': row[5]
@@ -823,7 +823,7 @@ def get_top_decliners(conn):
     try:
         cursor = conn.cursor()
         query = """
-            SELECT SYMBOL, SECTOR, "LISTED IN", "CHANGE (%)", CURRENT, VOLUME
+            SELECT SYMBOL, SECTOR, "LISTED_IN", "CHANGE (%)", CURRENT, VOLUME
             FROM MarketWatch
             ORDER BY "CHANGE (%)" ASC
             LIMIT 10;
@@ -836,7 +836,7 @@ def get_top_decliners(conn):
             decliners.append({
                 'SYMBOL': row[0],
                 'SECTOR': row[1],
-                'LISTED IN': row[2],
+                'LISTED_IN': row[2],
                 'CHANGE (%)': row[3],
                 'CURRENT': row[4],
                 'VOLUME': row[5]
@@ -861,7 +861,7 @@ def get_top_active(conn):
     try:
         cursor = conn.cursor()
         query = """
-            SELECT SYMBOL, SECTOR, "LISTED IN", VOLUME, CURRENT, "CHANGE (%)"
+            SELECT SYMBOL, SECTOR, "LISTED_IN", VOLUME, CURRENT, "CHANGE (%)"
             FROM MarketWatch
             ORDER BY VOLUME DESC
             LIMIT 10;
@@ -874,7 +874,7 @@ def get_top_active(conn):
             most_active.append({
                 'SYMBOL': row[0],
                 'SECTOR': row[1],
-                'LISTED IN': row[2],
+                'LISTED_IN': row[2],
                 'VOLUME': row[3],
                 'CURRENT': row[4],
                 'CHANGE (%)': row[5]
@@ -919,7 +919,7 @@ def merge_data(market_data, listings_data, defaulters_data):
             symbol_to_data[symbol] = {
                 'SYMBOL': symbol,
                 'SECTOR': listing['SECTOR'],
-                'LISTED IN': listing['LISTED IN'],
+                'LISTED_IN': listing['LISTED_IN'],
                 'CHANGE (%)': None,
                 'CURRENT': None,
                 'VOLUME': None,
@@ -943,7 +943,7 @@ def merge_data(market_data, listings_data, defaulters_data):
             symbol_to_data[symbol] = {
                 'SYMBOL': symbol,
                 'SECTOR': defaulter['SECTOR'],
-                'LISTED IN': defaulter['LISTED IN'],
+                'LISTED_IN': defaulter['LISTED_IN'],
                 'CHANGE (%)': None,  # Unknown
                 'CURRENT': None,  # Unknown
                 'VOLUME': None,  # Unknown

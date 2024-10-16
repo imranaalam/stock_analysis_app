@@ -8,6 +8,7 @@
 |-- app.log
 |-- data
     |-- tick_data - Copy (2).db
+    |-- tick_data - Copy.db
     |-- tick_data.db
 |-- databasestructure.py
 |-- database_structure_and_samples.txt
@@ -28,6 +29,7 @@
 |-- tests
     |-- data
     |-- tests
+    |-- test_data_download.py
     |-- test_mxll.py
 |-- utils
     |-- data_fetcher.py

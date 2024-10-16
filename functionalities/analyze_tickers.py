@@ -123,7 +123,7 @@ def analyze_tickers(conn):
                 logging.warning(f"No tickers found for index '{selected_index}'.")
                 return
         else:
-            st.warning("No indexes available for analysis. Please ensure that 'LISTED IN' field is populated.")
+            st.warning("No indexes available for analysis. Please ensure that 'LISTED_IN' field is populated.")
             logging.warning("No indexes found in MarketWatch.")
             return
 
@@ -290,11 +290,11 @@ def analyze_tickers(conn):
                         continue
 
                     # Determine which index the ticker belongs to (if any)
-                    cursor.execute('SELECT "LISTED IN" FROM MarketWatch WHERE SYMBOL = ? LIMIT 1;', (ticker,))
+                    cursor.execute('SELECT "LISTED_IN" FROM MarketWatch WHERE SYMBOL = ? LIMIT 1;', (ticker,))
                     result = cursor.fetchone()
                     listed_in = result[0] if result and result[0] else "Unknown"
 
-                    # Customize figure based on 'LISTED IN'
+                    # Customize figure based on 'LISTED_IN'
                     if analysis_type == "By Index":
                         fig.update_layout(title=f"{ticker} - {listed_in}")
 

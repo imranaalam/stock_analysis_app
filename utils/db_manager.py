@@ -5,6 +5,7 @@ import sqlite3
 import logging
 from datetime import datetime, timedelta
 import pandas as pd
+import holidays  # Ensure this import is present
 
 from utils.data_fetcher import (
     fetch_kse_market_watch,
@@ -158,31 +159,25 @@ def initialize_db_and_tables(db_path='data/tick_data.db'):
 
 import re
 
-def clean_numeric(value, field_name, ticker):
+
+
+def clean_numeric(value, field_name):
     """
-    Cleans a numeric string by removing commas, percentage signs, and other non-numeric characters.
-    
+    Cleans and prepares numeric string values by removing commas and other unwanted characters.
+
     Args:
-        value (str): The numeric string to clean.
+        value (str or float): The value to clean.
         field_name (str): The name of the field being cleaned (for logging purposes).
-        ticker (str): The ticker symbol (for logging purposes).
-    
+
     Returns:
-        float or int: The cleaned numeric value.
-    
-    Raises:
-        ValueError: If the cleaned string cannot be converted to float or int.
+        float or int: Cleaned numeric value.
     """
-    try:
-        # Remove commas, percentage signs, and any other non-numeric characters except the decimal point
-        cleaned_value = re.sub(r'[^\d\.]', '', value)
-        
-        if '.' in cleaned_value:
-            return float(cleaned_value)
-        else:
-            return int(cleaned_value)
-    except Exception as e:
-        raise ValueError(f"Error cleaning field '{field_name}' for ticker '{ticker}': {e}")
+    if isinstance(value, str):
+        # Remove commas and any other non-numeric characters except the decimal point
+        cleaned_value = re.sub(r'[^\d.]+', '', value)
+        logging.debug(f"Cleaned '{field_name}': '{value}' -> '{cleaned_value}'")
+        return cleaned_value
+    return value
 
 
 
@@ -510,7 +505,7 @@ def partial_sync_ticker(conn, date_to, progress_bar=None, status_text=None, log_
                     change_p = float(record['CHANGE (%)'].replace('%', '').strip())
                     volume = int(record['VOLUME'].replace(',', '').strip())
                 except ValueError as ve:
-                    error_msg = f"❌ Data type conversion error for ticker '{ticker}': {ve}"
+                    error_msg = f"❌ Partial Sync: Data type conversion error for ticker '{ticker}': {ve}"
                     errors.append(error_msg)
                     logger.error(error_msg)
                     if log_container:
@@ -584,10 +579,6 @@ def partial_sync_ticker(conn, date_to, progress_bar=None, status_text=None, log_
     
     return summary
 
-
-
-
-
 def insert_ticker_data_into_db(conn, data, ticker, batch_size=100):
     """
     Inserts the list of stock data into the SQLite database in batches.
@@ -637,7 +628,7 @@ def insert_ticker_data_into_db(conn, data, ticker, batch_size=100):
                     formatted_date = parsed_date.strftime('%d %b %Y')
                     logging.info(f"Formatted date for ticker '{ticker}': {formatted_date}")
                 except ValueError as ve:
-                    error_msg = f"❌ Date format error for ticker '{ticker}' with date '{date_str}': {ve}. Skipping record."
+                    error_msg = f"❌ data Prepration: Date format error for ticker '{ticker}' with date '{date_str}': {ve}. Skipping record."
                     logging.error(error_msg)
                     errors.append(error_msg)
                     continue
@@ -655,23 +646,24 @@ def insert_ticker_data_into_db(conn, data, ticker, batch_size=100):
                 logging.info(f"Extracted fields for ticker '{ticker}': Open={open_}, High={high}, Low={low}, Close={close}, Change={change}, ChangeP={change_p}, Volume={volume}")
 
                 # Data Cleaning: Ensure numeric fields are correctly formatted
-                def clean_numeric(value, field_name):
-                    if isinstance(value, str):
-                        cleaned_value = value.replace(',', '').strip()
-                        logging.debug(f"Cleaned '{field_name}': '{value}' -> '{cleaned_value}'")
-                        return cleaned_value
-                    return value
-
                 open_ = clean_numeric(open_, 'Open')
+                logging.debug(f"After cleaning, Open: {open_}")
                 high = clean_numeric(high, 'High')
+                logging.debug(f"After cleaning, High: {high}")
                 low = clean_numeric(low, 'Low')
+                logging.debug(f"After cleaning, Low: {low}")
                 close = clean_numeric(close, 'Close')
+                logging.debug(f"After cleaning, Close: {close}")
                 change = clean_numeric(change, 'Change')
+                logging.debug(f"After cleaning, Change: {change}")
                 change_p = clean_numeric(change_p, 'Change (%)')
+                logging.debug(f"After cleaning, ChangeP: {change_p}")
                 volume = clean_numeric(volume, 'Volume')
+                logging.debug(f"After cleaning, Volume: {volume}")
 
                 # Convert fields to appropriate data types
                 try:
+                    logger.debug(f"Converting Open: {open_}, High: {high}, Low: {low}, Close: {close}, Change: {change}, ChangeP: {change_p}, Volume: {volume}")
                     open_ = float(open_)
                     high = float(high)
                     low = float(low)
@@ -680,7 +672,7 @@ def insert_ticker_data_into_db(conn, data, ticker, batch_size=100):
                     change_p = round(float(change_p), 2)  # Round to two decimal places
                     volume = int(float(volume))  # Ensure volume is an integer
                 except ValueError as ve:
-                    error_msg = f"❌ Data type conversion error for ticker '{ticker}' on date '{formatted_date}': {ve}. Skipping record."
+                    error_msg = f"❌ Insertion:Data type conversion error for ticker '{ticker}' on date '{formatted_date}': {ve}. Skipping record."
                     logging.error(error_msg)
                     errors.append(error_msg)
                     continue
@@ -726,12 +718,12 @@ def insert_ticker_data_into_db(conn, data, ticker, batch_size=100):
         logging.info(f"✅ Successfully inserted/updated {records_added} records for ticker '{ticker}'.")
         return True, records_added, errors
 
+
     except Exception as e:
         error_msg = f"❌ Failed to insert data into database for ticker '{ticker}': {e}"
         logging.exception(error_msg)
         errors.append(error_msg)
         return False, records_added, errors
-
 
 
 def strip_symbol_suffix(symbol):
@@ -1160,42 +1152,37 @@ def get_unique_tickers_from_db(conn):
         return []
 
 
-def get_unique_tickers_from_mw(conn):
+
+
+def get_last_five_working_days(reference_date=None, num_days=5):
     """
-    Retrieves a list of unique tickers from the MarketWatch table.
+    Retrieves the last 'num_days' working days before the reference_date.
     
     Args:
-        conn (sqlite3.Connection): SQLite database connection.
+        reference_date (datetime or str, optional): The date to calculate from. Defaults to today.
+        num_days (int, optional): Number of working days to retrieve. Defaults to 5.
     
     Returns:
-        list: List of unique ticker symbols.
+        list: List of dates in 'YYYY-MM-DD' format.
     """
-    try:
-        with conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT DISTINCT symbol FROM marketwatch;")
-            tickers = [row[0] for row in cursor.fetchall()]
-            logging.info(f"Retrieved tickers from MarketWatch: {tickers}")
-            return tickers
-    except sqlite3.Error as e:
-        logging.error(f"Failed to retrieve unique tickers from MarketWatch: {e}")
-        return []
-  
+    if reference_date:
+        if isinstance(reference_date, str):
+            reference_date = datetime.strptime(reference_date, '%Y-%m-%d')
+    else:
+        reference_date = datetime.now()
+    
+    # Use pandas bdate_range to get business days (Monday-Friday)
+    end_date = reference_date - timedelta(days=1)  # Start from the day before the reference date
+    start_date = end_date - timedelta(days=num_days*2)  # Approximate start date
+    
+    business_days = pd.bdate_range(start=start_date, end=end_date)
+    last_five = business_days[-num_days:]
+    
+    return [date.strftime('%Y-%m-%d') for date in last_five]
 
 
-def get_last_working_day(date):
-    """
-    Get the last working day before the given date (skips weekends).
 
-    Args:
-        date (datetime): The reference date.
 
-    Returns:
-        datetime: The last working day (Monday to Friday).
-    """
-    while date.weekday() >= 5:  # 5 = Saturday, 6 = Sunday
-        date -= timedelta(days=1)
-    return date
 
 
 def synchronize_database(conn, date_to, progress_bar=None, status_text=None, log_container=None):
@@ -1518,6 +1505,87 @@ def insert_psx_constituents(conn, psx_data):
     except sqlite3.Error as e:
         logger.error(f"Failed to insert/update PSX Constituents data: {e}")
 
+
+#####################
+
+def get_last_five_working_days(conn, num_days=5):
+    """
+    Retrieves the last 'num_days' working days before today,
+    excluding weekends and Pakistan's public holidays.
+    
+    Args:
+        conn (sqlite3.Connection): SQLite database connection.
+        num_days (int, optional): Number of working days to retrieve. Defaults to 5.
+    
+    Returns:
+        list: List of dates in 'YYYY-MM-DD' format.
+    """
+    reference_date = datetime.now()
+    pak_holidays = holidays.Pakistan(years=reference_date.year)
+    
+    business_days = []
+    current_date = reference_date - timedelta(days=1)  # Start from yesterday
+    
+    while len(business_days) < num_days:
+        if current_date.weekday() < 5 and current_date not in pak_holidays:
+            business_days.append(current_date)
+        current_date -= timedelta(days=1)
+    
+    # Reverse to have dates in chronological order
+    business_days = list(reversed(business_days))
+    
+    date_list = [date.strftime('%Y-%m-%d') for date in business_days]
+    logger.info(f"Last {num_days} working days: {date_list}")
+    return date_list
+
+def is_data_present_for_date(conn, date):
+    """
+    Checks if there are any records in the Ticker table for the given date.
+    
+    Args:
+        conn (sqlite3.Connection): SQLite database connection.
+        date (str): Date in 'YYYY-MM-DD' format.
+    
+    Returns:
+        bool: True if data exists for the date, False otherwise.
+    """
+    try:
+        cursor = conn.cursor()
+        query = """
+            SELECT EXISTS(
+                SELECT 1 FROM Ticker WHERE Date = ?
+                LIMIT 1
+            );
+        """
+        cursor.execute(query, (date,))
+        result = cursor.fetchone()
+        exists = bool(result[0])
+        logger.info(f"Data presence check for date {date}: {exists}")
+        return exists
+    except sqlite3.Error as e:
+        logger.error(f"Database error during data presence check for date {date}: {e}")
+        return False
+
+def get_missing_dates(conn, num_days=5):
+    """
+    Retrieves the list of last 'num_days' working days that are missing in the Ticker table.
+    
+    Args:
+        conn (sqlite3.Connection): SQLite database connection.
+        num_days (int, optional): Number of working days to check. Defaults to 5.
+    
+    Returns:
+        list: List of dates in 'YYYY-MM-DD' format that are missing in the Ticker table.
+    """
+    missing_dates = []
+    last_five_days = get_last_five_working_days(conn, num_days=num_days)
+    
+    for date in last_five_days:
+        if not is_data_present_for_date(conn, date):
+            missing_dates.append(date)
+    
+    logger.info(f"Missing dates for synchronization: {missing_dates}")
+    return missing_dates
 
 
 

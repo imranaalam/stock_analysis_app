@@ -10,3 +10,4 @@ aiohttp
 bs4
 openpyxl
 pytz
+holidays

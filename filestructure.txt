@@ -1,3 +1,5 @@
+|-- .devcontainer
+    |-- devcontainer.json
 |-- .gitattributes
 |-- .gitignore
 |-- analysis

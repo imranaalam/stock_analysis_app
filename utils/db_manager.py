@@ -20,14 +20,9 @@ from utils.data_fetcher import (
 
 # when running main.py
 from utils.logger import setup_logging
-
 import asyncio
 import aiohttp
 from utils.data_fetcher import async_get_stock_data
-
-
-
-
 
 setup_logging()
 logger = logging.getLogger(__name__)

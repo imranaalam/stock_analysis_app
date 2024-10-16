@@ -32,7 +32,7 @@ from utils.data_fetcher import async_get_stock_data
 
 from dateutil import parser  # Ensure this line is present
 
-
+#loging
 setup_logging()
 logger = logging.getLogger(__name__)
 

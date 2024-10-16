@@ -1,0 +1,13 @@
+streamlit
+pandas
+plotly
+ta
+requests
+tabulate
+python-dateutil
+smartmoneyconcepts
+aiohttp
+asyncio
+bs4
+datetime
+logging

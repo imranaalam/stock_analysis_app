@@ -1,0 +1,2 @@
+# Ignore the SQLite database file
+data/tick_data.db

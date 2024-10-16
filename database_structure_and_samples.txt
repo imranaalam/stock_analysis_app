@@ -1,0 +1,162 @@
+Database Analysis Report
+========================
+
+
+Database: tick_data - Copy (2).db
+==================================
+Table Structure:
+
+Table: Ticker
+Columns:
+ - (0, 'Ticker', 'TEXT', 0, None, 1)
+ - (1, 'Date', 'TEXT', 0, None, 2)
+ - (2, 'Open', 'REAL', 0, None, 0)
+ - (3, 'High', 'REAL', 0, None, 0)
+ - (4, 'Low', 'REAL', 0, None, 0)
+ - (5, 'Close', 'REAL', 0, None, 0)
+ - (6, 'Change', 'REAL', 0, None, 0)
+ - (7, 'Change (%)', 'REAL', 0, None, 0)
+ - (8, 'Volume', 'INTEGER', 0, None, 0)
+
+
+Sampled Data from Tables:
+
+Table: Ticker
+Ticker       Date   Open   High    Low  Close  Change  Change (%)   Volume
+FATIMA 2023-06-09  27.75  28.95  27.75  28.45    0.75        2.71    35654
+  OGDC 2020-12-11 103.00 103.00 101.51 102.77    2.94        2.95  2905801
+   MCB 2023-11-06 142.07 144.98 142.07 143.06    0.99        0.70   394928
+  OGDC 2022-09-01  83.00  83.00  81.75  81.81   -0.39       -0.47  1153468
+  OGDC 2023-12-29 110.54 115.90 109.70 112.45    2.29        2.08 10443776
+
+
+
+Database: tick_data.db
+=======================
+Table Structure:
+
+Table: Transactions
+Columns:
+ - (0, 'Date', 'TEXT', 0, None, 1)
+ - (1, 'Settlement_Date', 'TEXT', 0, None, 0)
+ - (2, 'Buyer_Code', 'TEXT', 0, None, 3)
+ - (3, 'Seller_Code', 'TEXT', 0, None, 4)
+ - (4, 'Symbol_Code', 'TEXT', 0, None, 2)
+ - (5, 'Company', 'TEXT', 0, None, 0)
+ - (6, 'Turnover', 'INTEGER', 0, None, 0)
+ - (7, 'Rate', 'REAL', 0, None, 0)
+ - (8, 'Value', 'REAL', 0, None, 0)
+ - (9, 'Transaction_Type', 'TEXT', 0, None, 0)
+
+Table: Portfolios
+Columns:
+ - (0, 'Portfolio_ID', 'INTEGER', 0, None, 1)
+ - (1, 'Name', 'TEXT', 1, None, 0)
+ - (2, 'Stocks', 'TEXT', 1, None, 0)
+
+Table: sqlite_sequence
+Columns:
+ - (0, 'name', '', 0, None, 0)
+ - (1, 'seq', '', 0, None, 0)
+
+Table: PSXConstituents
+Columns:
+ - (0, 'ISIN', 'TEXT', 0, None, 1)
+ - (1, 'SYMBOL', 'TEXT', 0, None, 0)
+ - (2, 'COMPANY', 'TEXT', 0, None, 0)
+ - (3, 'PRICE', 'REAL', 0, None, 0)
+ - (4, 'IDX_WT', 'REAL', 0, None, 0)
+ - (5, 'FF_BASED_SHARES', 'INTEGER', 0, None, 0)
+ - (6, 'FF_BASED_MCAP', 'REAL', 0, None, 0)
+ - (7, 'ORD_SHARES', 'INTEGER', 0, None, 0)
+ - (8, 'ORD_SHARES_MCAP', 'REAL', 0, None, 0)
+ - (9, 'VOLUME', 'INTEGER', 0, None, 0)
+
+Table: Ticker
+Columns:
+ - (0, 'Ticker', 'TEXT', 0, None, 1)
+ - (1, 'Date', 'TEXT', 0, None, 2)
+ - (2, 'Open', 'REAL', 0, None, 0)
+ - (3, 'High', 'REAL', 0, None, 0)
+ - (4, 'Low', 'REAL', 0, None, 0)
+ - (5, 'Close', 'REAL', 0, None, 0)
+ - (6, 'Change', 'REAL', 0, None, 0)
+ - (7, 'Change (%)', 'REAL', 0, None, 0)
+ - (8, 'Volume', 'INTEGER', 0, None, 0)
+
+Table: MarketWatch
+Columns:
+ - (0, 'SYMBOL', 'TEXT', 0, None, 1)
+ - (1, 'ISIN', 'TEXT', 0, None, 0)
+ - (2, 'COMPANY', 'TEXT', 0, None, 0)
+ - (3, 'SECTOR', 'TEXT', 0, None, 2)
+ - (4, 'LISTED IN', 'TEXT', 0, None, 3)
+ - (5, 'LDCP', 'REAL', 0, None, 0)
+ - (6, 'OPEN', 'REAL', 0, None, 0)
+ - (7, 'HIGH', 'REAL', 0, None, 0)
+ - (8, 'LOW', 'REAL', 0, None, 0)
+ - (9, 'CURRENT', 'REAL', 0, None, 0)
+ - (10, 'CHANGE', 'REAL', 0, None, 0)
+ - (11, 'CHANGE (%)', 'REAL', 0, None, 0)
+ - (12, 'VOLUME', 'INTEGER', 0, None, 0)
+ - (13, 'DEFAULTER', 'BOOLEAN', 0, 'FALSE', 0)
+ - (14, 'DEFAULTING_CLAUSE', 'TEXT', 0, None, 0)
+ - (15, 'PRICE', 'REAL', 0, None, 0)
+ - (16, 'IDX_WT', 'REAL', 0, None, 0)
+ - (17, 'FF_BASED_SHARES', 'INTEGER', 0, None, 0)
+ - (18, 'FF_BASED_MCAP', 'REAL', 0, None, 0)
+ - (19, 'ORD_SHARES', 'INTEGER', 0, None, 0)
+ - (20, 'ORD_SHARES_MCAP', 'REAL', 0, None, 0)
+ - (21, 'SYMBOL_SUFFIX', 'TEXT', 0, None, 0)
+ - (22, 'Date', 'TEXT', 0, None, 0)
+ - (23, 'IS_INDEX', 'BOOLEAN', 0, 'FALSE', 0)
+
+
+Sampled Data from Tables:
+
+Table: Transactions
+      Date Settlement_Date Buyer_Code Seller_Code Symbol_Code            Company  Turnover   Rate       Value Transaction_Type
+2024-10-14      2024-10-16        187         187        HUBC      Hub Power Co.     20000  97.70   1954000.0              I2I
+2024-10-14      2024-10-16       None        None         UBL        United Bank    620364 299.65 185892073.0              B2B
+2024-10-14      2024-10-16        006         006        CWSM   Chakwal Spinning     10000  38.00    380000.0              I2I
+2024-10-14      2024-10-16        194         194        ATRL Attock Refinery-XD     15000 344.14   5162100.0              I2I
+2024-10-14      2024-10-14        046         046        LUCK       Lucky Cement      2000 840.00   1680000.0              I2I
+
+
+Table: Portfolios
+ Portfolio_ID Name  Stocks
+            6 geem     PSO
+            7  koo PSO,PPL
+
+
+Table: sqlite_sequence
+      name  seq
+Portfolios    7
+
+
+Table: PSXConstituents
+        ISIN SYMBOL                               COMPANY  PRICE   IDX_WT  FF_BASED_SHARES  FF_BASED_MCAP  ORD_SHARES  ORD_SHARES_MCAP  VOLUME
+PK0003301014   ATIL               Atlas Insurance Limited  42.00 0.056215         29883135   1.255092e+09   149415691     6.275459e+09   13026
+PK0060401012    KCL                Karam Ceramics Limited  64.88 0.008456         10184073   6.607427e+08    14549060     9.439430e+08       0
+PK0113801010    AGP                           AGP Limited 121.08 0.303695         84000000   1.017072e+10   280000000     3.390240e+10   66281
+PK0042601010   PRIC Progressive Insurance Company Limited   1.13 0.000086          3825000   4.322250e+06     8500000     9.605000e+06       0
+PK0010301015   DMTX            D.M. Textile Mills Limited  50.71 0.001387           915729   4.643662e+07     3052400     1.547872e+08       0
+
+
+Table: Ticker
+Ticker       Date   Open   High    Low  Close  Change  Change (%)  Volume
+  INDU 2008-07-14 192.17 182.57 182.57 182.57   -9.60       -5.00     100
+  JDMT 2023-02-02  51.90  51.90  51.90  51.90    3.21        6.59     500
+  FHAM 2021-10-06  10.23  10.23  10.06  10.10   -0.12       -1.17  125000
+  HICL 2008-06-25  69.99  69.30  69.30  69.30   -0.69       -0.99     200
+  LUCK 2014-10-24 403.80 406.49 397.60 399.23   -2.80       -0.70  636800
+
+
+Table: MarketWatch
+ SYMBOL         ISIN                         COMPANY                                   SECTOR LISTED IN   LDCP   OPEN   HIGH    LOW  CURRENT  CHANGE  CHANGE (%)   VOLUME  DEFAULTER DEFAULTING_CLAUSE  PRICE   IDX_WT  FF_BASED_SHARES  FF_BASED_MCAP   ORD_SHARES  ORD_SHARES_MCAP SYMBOL_SUFFIX Date  IS_INDEX
+    GOC PK0032301019              GOC (Pak) Limited.                            MISCELLANEOUS KMIALLSHR  58.60  58.00  58.00  57.87    58.60     NaN         NaN     12.0          0              None  58.60 0.003858        1102401.0   6.460070e+07    7348950.0     4.306485e+08          None None         0
+ LSEFSL PK0104901019 LSE Financial Services Limited. INV. BANKS / INV. COS. / SECURITIES COS.    ALLSHR   4.20   4.15   4.50   4.02     4.20     NaN         NaN   7667.0          0              None   4.20 0.001342        7135516.0   2.996917e+07   35677578.0     1.498458e+08          None None         0
+LOTCHEM PK0077901012 Lotte Chemical Pakistan Limited                                 CHEMICAL    KSE100  17.04  17.02  17.26  17.02    17.19    0.15        0.88 639209.0          0              None  17.04 0.231133      378551802.0   6.450523e+09 1514207200.0     2.580209e+10          None None         0
+ MACTER PK0113501016    Macter International Limited                          PHARMACEUTICALS KMIALLSHR 136.41 127.05 139.88 127.05   136.41     NaN         NaN    129.0          0              None 136.41 0.055979       16033856.0   2.187178e+09   45811018.0     6.249081e+09          None None         0
+   NRSL PK0056501015            Nimir Resins Limited                                 CHEMICAL    ALLSHR  23.07  22.51  22.70  22.41    22.50   -0.57       -2.47   7323.0          0              None  23.07 0.029205       56528426.0   1.304111e+09  141321100.0     3.260278e+09          None None         0
+

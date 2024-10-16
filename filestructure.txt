@@ -1,0 +1,48 @@
+|-- .gitattributes
+|-- .gitignore
+|-- analysis
+    |-- mxwll_suite_indicator.py
+    |-- __pycache__
+        |-- mxwll_suite_indicator.cpython-310.pyc
+        |-- mxwll_suite_indicator.cpython-312.pyc
+|-- app.log
+|-- bfg-1.14.0.jar
+|-- data
+    |-- tick_data - Copy (2).db
+    |-- tick_data.db
+|-- databasestructure.py
+|-- database_structure_and_samples.txt
+|-- functionalities
+    |-- add_new_ticker.py
+    |-- analyze_tickers.py
+    |-- manage_portfolios.py
+    |-- synchronize_database.py
+    |-- __init__.py
+    |-- __pycache__
+        |-- add_new_ticker.cpython-312.pyc
+        |-- analyze_tickers.cpython-312.pyc
+        |-- manage_portfolios.cpython-312.pyc
+        |-- synchronize_database.cpython-312.pyc
+        |-- __init__.cpython-312.pyc
+|-- main.py
+|-- requirements.txt
+|-- tests
+    |-- data
+    |-- fetch_psx_historical_test.py
+    |-- tests
+    |-- test_mxll.py
+|-- utils
+    |-- data_fetcher.py
+    |-- db_manager.py
+    |-- helpers.py
+    |-- kse_index_record_fetcher.py
+    |-- logger.py
+    |-- __init__.py
+    |-- __pycache__
+        |-- data_fetcher.cpython-310.pyc
+        |-- data_fetcher.cpython-312.pyc
+        |-- db_manager.cpython-310.pyc
+        |-- db_manager.cpython-312.pyc
+        |-- helpers.cpython-312.pyc
+        |-- logger.cpython-312.pyc
+        |-- __init__.cpython-312.pyc

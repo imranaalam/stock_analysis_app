@@ -9,3 +9,4 @@ smartmoneyconcepts
 aiohttp
 bs4
 openpyxl
+pytz

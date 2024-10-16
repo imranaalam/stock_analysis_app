@@ -288,118 +288,6 @@ async def async_get_stock_data(session, ticker, date_from, date_to):
     
 
 
-# utils/data_fetcher.py
-
-# utils/data_fetcher.py
-
-def fetch_psx_historical(date):
-    """
-    Fetches historical PSX data for a specific date.
-
-    Args:
-        date (str): Date in 'dd-MMM-yyyy' format (e.g., '15-Oct-2024').
-
-    Returns:
-        str: HTML content of the fetched data.
-    """
-    url = "https://dps.psx.com.pk/historical"
-
-    headers = {
-        "accept": "text/html, */*; q=0.01",
-        "accept-language": "en-US,en;q=0.9,ps;q=0.8",
-        "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
-        "sec-ch-ua": "\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"",
-        "sec-ch-ua-mobile": "?0",
-        "sec-ch-ua-platform": "\"Windows\"",
-        "sec-fetch-dest": "empty",
-        "sec-fetch-mode": "cors",
-        "sec-fetch-site": "same-origin",
-        "x-requested-with": "XMLHttpRequest",
-        "referrer": "https://dps.psx.com.pk/historical",
-        "referrerPolicy": "same-origin"
-    }
-
-    data = {
-        'date': date  # Ensure this matches the expected format
-    }
-
-    try:
-        # Making the POST request
-        response = requests.post(url, headers=headers, data=data, timeout=60)
-
-        # Logging the request details
-        logger.info(f"POST Request to {url} with date={date}")
-
-        # Checking if the request was successful
-        if response.status_code == 200:
-            logger.info(f"Successfully fetched historical data for date: {date}")
-
-            # Optional: Log a snippet of the HTML response for debugging
-            html_snippet = response.text[:1000]  # First 1000 characters
-            logger.debug(f"HTML Response Snippet: {html_snippet}")
-
-            return response.text  # Return the HTML content of the response
-        else:
-            logger.error(f"Failed to fetch data for date: {date}, Status Code: {response.status_code}")
-            raise Exception(f"Error: Unable to fetch data, status code: {response.status_code}")
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Request exception while fetching historical data for date: {date}, Error: {e}")
-        raise Exception(f"Error: Unable to fetch data for date {date}, {e}")
-
-
-
-
-# utils/data_fetcher.py
-
-def parse_html_to_df(html_data):
-    """
-    Parses HTML data into a pandas DataFrame.
-
-    Args:
-        html_data (str): HTML content containing the data table.
-
-    Returns:
-        DataFrame: Parsed DataFrame with the data.
-    """
-    soup = BeautifulSoup(html_data, 'html.parser')
-
-    # Attempt to find the first table with class 'tbl'
-    table = soup.find('table', {'class': 'tbl'})
-
-    if not table:
-        logger.error("No table with class 'tbl' found in the HTML data.")
-        return pd.DataFrame()
-
-    rows = table.find_all('tr')
-
-    if not rows:
-        logger.error("No table rows found in the HTML data.")
-        return pd.DataFrame()
-
-    headers = [header.get_text().strip() for header in rows[0].find_all('th')]
-
-    if not headers:
-        logger.error("No table headers found in the HTML data.")
-        return pd.DataFrame()
-
-    table_data = []
-
-    for row in rows[1:]:
-        cols = row.find_all('td')
-        if not cols:
-            continue  # Skip rows without columns
-        data = [col.get_text().strip() for col in cols]
-        table_data.append(data)
-
-    if not table_data:
-        logger.warning("No data rows found in the table.")
-        return pd.DataFrame()
-
-    df = pd.DataFrame(table_data, columns=headers)
-
-    logger.info("Successfully parsed HTML data into DataFrame.")
-    return df
-
 
 
 async def fetch_all_tickers_data(tickers, date_from, date_to):
@@ -818,19 +706,110 @@ def fetch_psx_constituents(date=None):
         return []
     
 
-def test_fetch_psx_historical(date_input):
+
+
+def fetch_psx_historical(date):
+    """
+    Fetches historical PSX data for a specific date.
+
+    Args:
+        date (str): Date in 'dd-MMM-yyyy' format (e.g., '15-Oct-2024').
+
+    Returns:
+        str: HTML content of the fetched data.
+    """
+    url = "https://dps.psx.com.pk/historical"
+
+    headers = {
+        "accept": "text/html, */*; q=0.01",
+        "accept-language": "en-US,en;q=0.9,ps;q=0.8",
+        "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+        "sec-ch-ua": "\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"",
+        "sec-ch-ua-mobile": "?0",
+        "sec-ch-ua-platform": "\"Windows\"",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "same-origin",
+        "x-requested-with": "XMLHttpRequest",
+        "referrer": "https://dps.psx.com.pk/historical",
+        "referrerPolicy": "same-origin"
+    }
+
+    data = {
+        'date': date  # Ensure this matches the expected format
+    }
+
     try:
-        html_data = fetch_psx_historical(date_input)
-        df_head = parse_html_to_df(html_data)
-        if df_head.empty:
-            print(f"No data fetched for date: {date_input}")
+        # Making the POST request
+        response = requests.post(url, headers=headers, data=data, timeout=60)
+
+        # Logging the request details
+        logger.info(f"POST Request to {url} with date={date}")
+
+        # Checking if the request was successful
+        if response.status_code == 200:
+            logger.info(f"Successfully fetched historical data for date: {date}")
+
+            # Optional: Log a snippet of the HTML response for debugging
+            # html_snippet = response.text[:1000]  # First 1000 characters
+            # logger.debug(f"HTML Response Snippet: {html_snippet}")
+
+            return response.text  # Return the HTML content of the response
         else:
-            print(f"Data fetched successfully for date: {date_input}")
-            print(df_head.head())
-    except Exception as e:
-        print(f"Error during fetch: {e}")
+            logger.error(f"Failed to fetch data for date: {date}, Status Code: {response.status_code}")
+            raise Exception(f"Error: Unable to fetch data, status code: {response.status_code}")
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Request exception while fetching historical data for date: {date}, Error: {e}")
+        raise Exception(f"Error: Unable to fetch data for date {date}, {e}")
 
+def parse_html_to_df(html_data):
+    """
+    Parses HTML data into a pandas DataFrame.
 
+    Args:
+        html_data (str): HTML content containing the data table.
+
+    Returns:
+        DataFrame: Parsed DataFrame with the data.
+    """
+    soup = BeautifulSoup(html_data, 'html.parser')
+
+    # Attempt to find the first table with class 'tbl'
+    table = soup.find('table', {'class': 'tbl'})
+
+    if not table:
+        logger.error("No table with class 'tbl' found in the HTML data.")
+        return pd.DataFrame()
+
+    rows = table.find_all('tr')
+
+    if not rows:
+        logger.error("No table rows found in the HTML data.")
+        return pd.DataFrame()
+
+    headers = [header.get_text().strip() for header in rows[0].find_all('th')]
+
+    if not headers:
+        logger.error("No table headers found in the HTML data.")
+        return pd.DataFrame()
+
+    table_data = []
+
+    for row in rows[1:]:
+        cols = row.find_all('td')
+        if not cols:
+            continue  # Skip rows without columns
+        data = [col.get_text().strip() for col in cols]
+        table_data.append(data)
+
+    if not table_data:
+        logger.warning("No data rows found in the table.")
+        return pd.DataFrame()
+
+    df = pd.DataFrame(table_data, columns=headers)
+
+    logger.info("Successfully parsed HTML data into DataFrame.")
+    return df
 
 
 
@@ -846,6 +825,19 @@ def main():
 # This block ensures that the main function is only executed when the script is run directly.
 if __name__ == "__main__":
     # Test with a known valid date (e.g., last working day)
-    test_date = "15-Oct-2024"  # Replace with a known date that has data
-    test_fetch_psx_historical(test_date)
+
+    date_input = "2024-10-15"
+    try:
+        html_data = fetch_historical_data(date_input)  # Fetch the HTML for the specific date
+        if html_data:
+            df = parse_html_to_df(html_data)  # Parse and get the DataFrame
+            if not df.empty:
+                print("Parsed DataFrame:")
+                print(df.head())
+            else:
+                print("Parsed DataFrame is empty.")
+        else:
+            print("Failed to fetch HTML data.")
+    except Exception as e:
+        print(f"An error occurred: {e}")
 

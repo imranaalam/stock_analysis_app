@@ -75,12 +75,12 @@ def analyze_tickers(conn):
         if group_identifier:
             selected_tickers = get_tickers_by_group(conn, group_identifier)
 
-            # Debugging Output: Show fetched tickers
-            # st.write(f"🔍 **Fetched Tickers for '{selected_group}':**")
-            if selected_tickers:
-                st.write(selected_tickers)
-            else:
-                st.write("No tickers found for this group.")
+            # # Debugging Output: Show fetched tickers
+            # # st.write(f"🔍 **Fetched Tickers for '{selected_group}':**")
+            # if selected_tickers:
+            #     st.write(selected_tickers)
+            # else:
+            #     st.write("No tickers found for this group.")
 
             if selected_tickers:
                 selected_tickers = st.multiselect(
@@ -104,12 +104,12 @@ def analyze_tickers(conn):
             selected_index = st.selectbox("Select an Index", indexes)
             selected_tickers = get_tickers_by_index(conn, selected_index)
 
-            # Debugging Output: Show fetched index tickers
-            # st.write(f"🔍 **Fetched Tickers for Index '{selected_index}':**")
-            if selected_tickers:
-                st.write(selected_tickers)
-            else:
-                st.write("No tickers found for this index.")
+            # # Debugging Output: Show fetched index tickers
+            # # st.write(f"🔍 **Fetched Tickers for Index '{selected_index}':**")
+            # if selected_tickers:
+            #     st.write(selected_tickers)
+            # else:
+            #     st.write("No tickers found for this index.")
 
             if selected_tickers:
                 selected_tickers = st.multiselect(

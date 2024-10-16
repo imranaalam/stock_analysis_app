@@ -6,7 +6,6 @@ import logging
 from datetime import datetime, timedelta
 import pandas as pd
 
-# when running the app main.py
 from utils.data_fetcher import (
     fetch_kse_market_watch,
     get_listings_data,
@@ -15,7 +14,11 @@ from utils.data_fetcher import (
     fetch_psx_constituents,
     get_stock_data,
     async_get_stock_data, 
-    fetch_all_tickers_data
+    fetch_all_tickers_data,
+    parse_html_to_df,
+    fetch_psx_historical
+
+    
 )
 
 # when running main.py
@@ -153,168 +156,34 @@ def initialize_db_and_tables(db_path='data/tick_data.db'):
 
 
 
+import re
 
-    
-    
-# utils/db_manager.py
-def insert_ticker_data_into_db(conn, data, ticker, batch_size=100):
+def clean_numeric(value, field_name, ticker):
     """
-    Inserts the list of stock data into the SQLite database in batches.
-    Returns a tuple of (success, records_added).
-    """
-    try:
-        cursor = conn.cursor()
-        insert_query = """
-            INSERT OR IGNORE INTO Ticker 
-            (Ticker, Date, Open, High, Low, Close, Change, "Change (%)", Volume) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
-        """
-        
-        # Prepare data for insertion
-        data_to_insert = []
-        for record in data:
-            try:
-                # Parse and reformat the date to 'YYYY-MM-DD'
-                date_raw = record.get('Date', record.get('Date_'))  # Handle both 'Date' and 'Date_'
-                date = datetime.strptime(date_raw[:10], "%Y-%m-%d").strftime("%Y-%m-%d")  # Ensure the correct format
-
-                # Extract and round the numeric fields
-                open_ = round(float(record['Open']), 2)
-                high = round(float(record['High']), 2)
-                low = round(float(record['Low']), 2)
-                close = round(float(record['Close']), 2)
-                change = round(float(record['Change']), 2)
-                change_p = round(float(record.get('Change (%)', record.get('ChangeP', record.get('change_valueP')))), 2)
-                volume = int(record['Volume'])
-
-                if date and open_ and high and low and close and volume:
-                    data_to_insert.append((ticker, date, open_, high, low, close, change, change_p, volume))
-
-            except (ValueError, KeyError) as e:
-                logging.error(f"Error parsing data for ticker '{ticker}', record: {record}, error: {e}")
-                continue
-
-        # Log how many valid records are ready for insertion
-        logging.info(f"Prepared {len(data_to_insert)} valid records for insertion for ticker '{ticker}'.")
-
-        if not data_to_insert:
-            logging.warning(f"No valid data to insert for ticker '{ticker}'.")
-            return True, 0  # Success but no records added
-        
-        # Insert data in batches
-        total_records = len(data_to_insert)
-        records_added = 0
-        for i in range(0, total_records, batch_size):
-            batch = data_to_insert[i:i + batch_size]
-            logging.info(f"Inserting batch {i // batch_size + 1} for ticker '{ticker}' with {len(batch)} records.")
-            cursor.executemany(insert_query, batch)
-            conn.commit()
-            
-            # Log how many records were added
-            logging.info(f"Batch {i // batch_size + 1} inserted {cursor.rowcount} records (may include ignored records).")
-            records_added += cursor.rowcount
-        
-        # Log the total number of records added for this ticker
-        logging.info(f"Added {records_added} records for ticker '{ticker}'.")
-    
-        # Verify whether records were actually inserted by querying the database
-        cursor.execute("SELECT COUNT(*) FROM Ticker WHERE Ticker = ?;", (ticker,))
-        total_in_db = cursor.fetchone()[0]
-        logging.info(f"Total records in the database for ticker '{ticker}': {total_in_db}")
-    
-        return True, records_added
-
-    except sqlite3.Error as e:
-        logging.error(f"Failed to insert data into database for ticker '{ticker}': {e}")
-        return False, 0
-
-
-
-def partial_sync_ticker(conn, date):
-    """
-    Performs a partial synchronization by fetching and updating ticker data for a specific date.
+    Cleans a numeric string by removing commas, percentage signs, and other non-numeric characters.
     
     Args:
-        conn (sqlite3.Connection): SQLite database connection.
-        date (str): Date in 'YYYY-MM-DD' format.
+        value (str): The numeric string to clean.
+        field_name (str): The name of the field being cleaned (for logging purposes).
+        ticker (str): The ticker symbol (for logging purposes).
     
     Returns:
-        dict: Summary of the synchronization process.
-    """
-    summary = {
-        'records_fetched': 0,
-        'records_added': 0,
-        'records_updated': 0,
-        'errors': []
-    }
+        float or int: The cleaned numeric value.
     
+    Raises:
+        ValueError: If the cleaned string cannot be converted to float or int.
+    """
     try:
-        # Fetch historical data
-        data = fetch_historical_data(date)
-        if not data:
-            summary['errors'].append(f"No data fetched for date {date}.")
-            return summary
+        # Remove commas, percentage signs, and any other non-numeric characters except the decimal point
+        cleaned_value = re.sub(r'[^\d\.]', '', value)
         
-        # Assume 'data' is a list of dictionaries with the necessary fields
-        for record in data:
-            try:
-                ticker = record.get('Ticker')
-                open_price = float(record.get('Open', 0))
-                high = float(record.get('High', 0))
-                low = float(record.get('Low', 0))
-                close = float(record.get('Close', 0))
-                change = float(record.get('Change', 0))
-                change_percent = float(record.get('Change (%)', 0))
-                volume = int(record.get('Volume', 0))
-                
-                # Insert or replace the record in the Ticker table
-                cursor = conn.cursor()
-                cursor.execute("""
-                    INSERT INTO Ticker (Ticker, Date, Open, High, Low, Close, Change, "Change (%)", Volume)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ON CONFLICT(Ticker, Date) 
-                    DO UPDATE SET 
-                        Open=excluded.Open,
-                        High=excluded.High,
-                        Low=excluded.Low,
-                        Close=excluded.Close,
-                        Change=excluded.Change,
-                        "Change (%)"=excluded."Change (%)",
-                        Volume=excluded.Volume;
-                """, (ticker, date, open_price, high, low, close, change, change_percent, volume))
-                conn.commit()
-                summary['records_added'] += cursor.rowcount  # rowcount is 1 for insert, 1 for update
-                summary['records_fetched'] += 1
-            except Exception as e:
-                error_msg = f"Failed to insert/update record for ticker '{record.get('Ticker')}' on date '{date}': {e}"
-                logging.error(error_msg)
-                summary['errors'].append(error_msg)
-        
-        return summary
+        if '.' in cleaned_value:
+            return float(cleaned_value)
+        else:
+            return int(cleaned_value)
     except Exception as e:
-        error_msg = f"Partial synchronization failed for date '{date}': {e}"
-        logging.error(error_msg)
-        summary['errors'].append(error_msg)
-        return summary
+        raise ValueError(f"Error cleaning field '{field_name}' for ticker '{ticker}': {e}")
 
-
-
-
-def strip_symbol_suffix(symbol):
-    """
-    Strips the suffix from the stock symbol if it ends with XD, XB, XR, or DEF.
-
-    Args:
-        symbol (str): The original stock symbol.
-
-    Returns:
-        tuple: (base_symbol, suffix) where suffix is one of XD, XB, XR, DEF or None.
-    """
-    suffixes = ['XD', 'XB', 'XR', 'DEF']
-    for suffix in suffixes:
-        if symbol.endswith(suffix):
-            return symbol[:-len(suffix)], suffix
-    return symbol, None
 
 
 def insert_market_watch_data_into_db(conn, date_to, batch_size=100):
@@ -474,8 +343,8 @@ def insert_market_watch_data_into_db(conn, date_to, batch_size=100):
         insert_query = """
             INSERT INTO MarketWatch 
             (SYMBOL, ISIN, COMPANY, SECTOR, "LISTED IN", LDCP, OPEN, HIGH, LOW, CURRENT, 
-             CHANGE, "CHANGE (%)", VOLUME, DEFAULTER, DEFAULTING_CLAUSE, PRICE, IDX_WT, 
-             FF_BASED_SHARES, FF_BASED_MCAP, ORD_SHARES, ORD_SHARES_MCAP, SYMBOL_SUFFIX)
+                CHANGE, "CHANGE (%)", VOLUME, DEFAULTER, DEFAULTING_CLAUSE, PRICE, IDX_WT, 
+                FF_BASED_SHARES, FF_BASED_MCAP, ORD_SHARES, ORD_SHARES_MCAP, SYMBOL_SUFFIX)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(SYMBOL, SECTOR, "LISTED IN") 
             DO UPDATE SET 
@@ -521,8 +390,269 @@ def insert_market_watch_data_into_db(conn, date_to, batch_size=100):
 
         return True, records_added
 
-    except (ValueError, KeyError) as e:
-        logger.error(f"Error parsing market watch data record: {record}, error: {e}")
+    except sqlite3.Error as e:
+        logger.error(f"Failed to insert market watch data into database: {e}")
+        return False, 0
+def partial_sync_ticker(conn, date_to, progress_bar=None, status_text=None, log_container=None):
+    """
+    Performs a partial synchronization by fetching and updating ticker data for a specific date.
+    
+    Args:
+        conn (sqlite3.Connection): SQLite database connection.
+        date_to (str): The date for synchronization in 'YYYY-MM-DD' format.
+        progress_bar (streamlit.progress): Streamlit progress bar object.
+        status_text (streamlit.empty): Streamlit empty object for status updates.
+        log_container (streamlit.container): Streamlit container for logs.
+    
+    Returns:
+        dict: Summary of partial synchronization results.
+    """
+    summary = {
+        'success': False,
+        'records_added': 0,
+        'message': '',
+        'errors': []
+    }
+
+    try:
+        # Step 1: Fetch PSX historical data for the specific date
+        logger.info(f"Fetching PSX historical data for date: {date_to}")
+        if log_container:
+            log_container.write(f"🔄 Fetching PSX historical data for date: {date_to}")
+        
+        try:
+            html_data = fetch_psx_historical(date_to)
+            if not html_data:
+                raise ValueError("Failed to fetch PSX historical data.")
+            logger.info(f"Successfully fetched historical data for date: {date_to}")
+        except Exception as e:
+            error_msg = f"Error fetching historical data for date {date_to}: {e}"
+            summary['errors'].append(error_msg)
+            logger.error(error_msg)
+            if log_container:
+                log_container.error(error_msg)
+            return summary
+        
+        # Step 2: Parse the HTML data into a DataFrame
+        logger.info("Parsing HTML data into DataFrame.")
+        try:
+            df = parse_html_to_df(html_data)
+            if df.empty:
+                raise ValueError("Parsed DataFrame is empty.")
+            logger.info(f"Successfully parsed DataFrame with {len(df)} records.")
+            if log_container:
+                log_container.write(f"📊 Parsed DataFrame with {len(df)} records.")
+        except Exception as e:
+            error_msg = f"Error parsing HTML data for date {date_to}: {e}"
+            summary['errors'].append(error_msg)
+            logger.error(error_msg)
+            if log_container:
+                log_container.error(error_msg)
+            return summary
+
+        # Step 3: Clean and prepare the data
+        # Adjust column names based on actual DataFrame
+        required_columns = ['SYMBOL', 'LDCP', 'OPEN', 'HIGH', 'LOW', 'CLOSE', 'CHANGE', 'CHANGE (%)', 'VOLUME']
+        missing_columns = [col for col in required_columns if col not in df.columns]
+        if missing_columns:
+            error_msg = f"Missing columns in parsed DataFrame: {missing_columns}"
+            summary['errors'].append(error_msg)
+            logger.error(error_msg)
+            if log_container:
+                log_container.error(error_msg)
+            return summary
+
+        # No 'Date' column in fetched data; set it manually
+        df['Date'] = date_to  # Assign the synchronization date to all records
+
+        # Rename 'SYMBOL' to 'Symbol_Code' to match database schema
+        df.rename(columns={'SYMBOL': 'Symbol_Code'}, inplace=True)
+
+        # Extract unique symbols from the fetched data
+        unique_symbols = df['Symbol_Code'].unique()
+        logger.info(f"Unique symbols fetched: {unique_symbols}")
+
+        if log_container:
+            log_container.write(f"🔍 Found {len(unique_symbols)} unique symbols to update.")
+        
+        # Step 4: Update the Ticker table for each symbol
+        records_added_total = 0
+        errors = []
+        total_symbols = len(unique_symbols)
+        
+        for idx, symbol in enumerate(unique_symbols, start=1):
+            try:
+                # Filter data for the current symbol and date
+                symbol_data = df[(df['Symbol_Code'] == symbol) & (df['Date'] == date_to)]
+                if symbol_data.empty:
+                    warning_msg = f"No data found for symbol '{symbol}' on date '{date_to}'."
+                    logger.warning(warning_msg)
+                    if log_container:
+                        log_container.warning(warning_msg)
+                    continue
+                
+                # Extract data for insertion
+                record = symbol_data.iloc[0]
+                ticker = symbol.upper()
+                date = record['Date']
+                try:
+                    # Clean numeric fields
+                    open_ = clean_numeric(record['OPEN'], 'OPEN', ticker)
+                    high = clean_numeric(record['HIGH'], 'HIGH', ticker)
+                    low = clean_numeric(record['LOW'], 'LOW', ticker)
+                    close = clean_numeric(record['CLOSE'], 'CLOSE', ticker)
+                    change = clean_numeric(record['CHANGE'], 'CHANGE', ticker)
+                    change_p = clean_numeric(record['CHANGE (%)'], 'CHANGE (%)', ticker)
+                    volume = clean_numeric(record['VOLUME'], 'VOLUME', ticker)
+                except ValueError as ve:
+                    error_msg = f"❌ Data type conversion error for ticker '{ticker}': {ve}"
+                    errors.append(error_msg)
+                    logger.error(error_msg)
+                    if log_container:
+                        log_container.error(error_msg)
+                    continue
+                
+                # Insert or update the Ticker table
+                success, records_added = insert_ticker_data_into_db(
+                    conn, 
+                    data=[{
+                        'Date': date,
+                        'Open': open_,
+                        'High': high,
+                        'Low': low,
+                        'Close': close,
+                        'Change': change,
+                        'Change (%)': change_p,
+                        'Volume': volume
+                    }],
+                    ticker=ticker
+                )
+                
+                if success:
+                    records_added_total += records_added
+                    logger.info(f"Successfully synchronized data for ticker '{ticker}'. Records added: {records_added}")
+                    if log_container:
+                        log_container.success(f"✅ Synchronized data for ticker '{ticker}'. Records added: {records_added}")
+                else:
+                    error_msg = f"❌ Failed to synchronize data for ticker '{ticker}'."
+                    errors.append(error_msg)
+                    logger.error(error_msg)
+                    if log_container:
+                        log_container.error(error_msg)
+                
+                # Update progress bar
+                if progress_bar and status_text:
+                    progress = (idx / total_symbols) * 100
+                    progress_bar.progress(progress / 100)
+                    status_text.text(f"Synchronizing tickers: {idx}/{total_symbols} completed.")
+            
+            except Exception as e:
+                error_msg = f"❌ Unexpected error for ticker '{symbol}': {e}"
+                errors.append(error_msg)
+                logger.exception(error_msg)
+                if log_container:
+                    log_container.error(error_msg)
+                continue
+        
+        # Final summary
+        summary['records_added'] = records_added_total
+        summary['errors'] = errors
+        summary['success'] = len(errors) == 0
+        summary['message'] = f"✅ Partial synchronization completed with {records_added_total} records added."
+        if errors:
+            summary['message'] += f" ⚠️ Encountered errors with {len(errors)} tickers."
+        
+        logger.info(summary['message'])
+        if log_container:
+            log_container.write(summary['message'])
+        
+    except Exception as e:
+        error_msg = f"Unexpected error during partial synchronization: {e}"
+        summary['errors'].append(error_msg)
+        logger.exception(error_msg)
+        if log_container:
+            log_container.error(error_msg)
+    
+    return summary
+
+
+def insert_ticker_data_into_db(conn, data, ticker, batch_size=100):
+    """
+    Inserts the list of stock data into the SQLite database in batches.
+    Returns a tuple of (success, records_added).
+    
+    Args:
+        conn (sqlite3.Connection): SQLite database connection.
+        data (list): List of dictionaries containing ticker data.
+        ticker (str): The ticker symbol.
+        batch_size (int): Number of records to insert per batch.
+    
+    Returns:
+        tuple: (success (bool), records_added (int))
+    """
+    try:
+        cursor = conn.cursor()
+        insert_query = """
+            INSERT OR REPLACE INTO Ticker 
+            (Ticker, Date, Open, High, Low, Close, Change, "Change (%)", Volume) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+        """
+        
+        # Prepare data for insertion
+        data_to_insert = []
+        for record in data:
+            try:
+                # Ensure all required fields are present
+                date = record.get('Date')
+                open_ = record.get('Open')
+                high = record.get('High')
+                low = record.get('Low')
+                close = record.get('Close')
+                change = record.get('Change')
+                change_p = record.get('Change (%)')
+                volume = record.get('Volume')
+                
+                if all(v is not None for v in [date, open_, high, low, close, change, change_p, volume]):
+                    data_to_insert.append((ticker, date, open_, high, low, close, change, change_p, volume))
+                else:
+                    logging.warning(f"Missing data for ticker '{ticker}' on date '{date}'. Skipping record.")
+            except KeyError as e:
+                logging.error(f"Missing key {e} in record: {record}. Skipping record.")
+                continue
+        
+        # Insert data in batches
+        total_records = len(data_to_insert)
+        records_added = 0
+        for i in range(0, total_records, batch_size):
+            batch = data_to_insert[i:i + batch_size]
+            cursor.executemany(insert_query, batch)
+            conn.commit()
+            records_added += cursor.rowcount
+        
+        logging.info(f"Inserted {records_added} records for ticker '{ticker}'.")
+        return True, records_added
+    
+    except sqlite3.Error as e:
+        logging.error(f"Failed to insert data into database for ticker '{ticker}': {e}")
+        return False, 0
+
+
+
+def strip_symbol_suffix(symbol):
+    """
+    Strips the suffix from the stock symbol if it ends with XD, XB, XR, or DEF.
+
+    Args:
+        symbol (str): The original stock symbol.
+
+    Returns:
+        tuple: (base_symbol, suffix) where suffix is one of XD, XB, XR, DEF or None.
+    """
+    suffixes = ['XD', 'XB', 'XR', 'DEF']
+    for suffix in suffixes:
+        if symbol.endswith(suffix):
+            return symbol[:-len(suffix)], suffix
+    return symbol, None
 
 
 

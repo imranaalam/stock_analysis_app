@@ -27,7 +27,6 @@
 |-- requirements.txt
 |-- tests
     |-- data
-    |-- fetch_psx_historical_test.py
     |-- tests
     |-- test_mxll.py
 |-- utils

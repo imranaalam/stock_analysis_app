@@ -1,2 +1,20 @@
-# Ignore the SQLite database file
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+# Virtual environment directories
+venv/
+.env
+
+# Logs
+*.log
+
+# Ignore the database copy if not needed
+data/tick_data - Copy (2).db
+
+# Ignore the original database if you're handling it with Git LFS
 data/tick_data.db
+
+# OS generated files
+.DS_Store
+Thumbs.db

@@ -6,7 +6,6 @@
         |-- mxwll_suite_indicator.cpython-310.pyc
         |-- mxwll_suite_indicator.cpython-312.pyc
 |-- app.log
-|-- bfg-1.14.0.jar
 |-- data
     |-- tick_data - Copy (2).db
     |-- tick_data.db

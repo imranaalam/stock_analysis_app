@@ -38,6 +38,8 @@ st.sidebar.header("Menu")
 app_mode = st.sidebar.selectbox("Choose the Scanner mode",
     ["Synchronize Database", "Analyze Tickers", "Manage Portfolios"])  # Removed "Add New Ticker"
 
+
+# removed add ticker
 # Import functionality modules based on user selection
 if app_mode == "Synchronize Database":
     synchronize_database_ui(conn)

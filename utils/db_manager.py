@@ -162,6 +162,48 @@ def initialize_db_and_tables(db_path='data/tick_data.db'):
         return None
 
 
+def clean_date(date_str):
+    """
+    Cleans and formats the input date string to 'YYYY-MM-DD'.
+
+    Args:
+        date_str (str): The original date string.
+
+    Returns:
+        str or None: The formatted date string or None if parsing fails.
+    """
+    logger = logging.getLogger(__name__)
+    if not date_str or not isinstance(date_str, str):
+        logger.error(f"Invalid date input: {date_str}")
+        return None
+
+    # Define possible date formats
+    date_formats = [
+        "%Y-%m-%dT%H:%M:%S",  # e.g., '2020-01-01T00:00:00'
+        "%Y-%m-%d %H:%M:%S",  # e.g., '2020-01-01 00:00:00'
+        "%Y-%m-%d",           # e.g., '2020-01-01'
+        "%d %b %Y",           # e.g., '15 Jan 2020'
+        "%d %B %Y",           # e.g., '15 January 2020'
+        "%m/%d/%Y",           # e.g., '01/15/2020'
+        "%d/%m/%Y",           # e.g., '15/01/2020'
+        "%d-%m-%Y",           # e.g., '15-01-2020'
+        "%B %d, %Y",          # e.g., 'January 15, 2020'
+        "%b %d, %Y",          # e.g., 'Jan 15, 2020'
+    ]
+
+    for fmt in date_formats:
+        try:
+            parsed_date = datetime.strptime(date_str.strip(), fmt)
+            formatted_date = parsed_date.strftime("%Y-%m-%d")
+            logger.debug(f"Converted '{date_str}' to '{formatted_date}' using format '{fmt}'")
+            return formatted_date
+        except ValueError:
+            continue  # Try the next format
+
+    # If none of the formats match, log an error
+    logger.error(f"Unable to parse date: {date_str}")
+    return None
+
 
 def clean_ticker_table(conn):
     """
@@ -448,32 +490,36 @@ def clean_numeric(value, field_name):
 
 
 
-def clean_date(date_str):
-    """
-    Cleans and validates the date field.
-    Returns the formatted date string if valid, otherwise returns None.
+# def clean_date(date_str):
+#     """
+#     Cleans and validates the date field.
+#     Returns the formatted date string if valid, otherwise returns None.
     
-    Supported formats:
-        - 'YYYY-MM-DD'
-        - 'YYYY-MM-DDTHH:MM:SS'
-        - Any other formats supported by dateutil.parser.parse
-    """
-    if not date_str:
-        return None
-    try:
-        # Use dateutil.parser for flexible date parsing
-        parsed_date = parser.parse(date_str)
-        formatted_date = parsed_date.strftime('%d %b %Y')
-        logger = logging.getLogger(__name__)
-        logger.debug(f"Formatted date: {formatted_date} from '{date_str}'")
-        return formatted_date
-    except (ValueError, OverflowError) as ve:
-        logger = logging.getLogger(__name__)
-        logger.error(f"Date format error: {ve} for date '{date_str}'")
-        return None
+#     Supported formats:
+#         - 'YYYY-MM-DD'
+#         - 'YYYY-MM-DDTHH:MM:SS'
+#         - Any other formats supported by dateutil.parser.parse
+#     """
+#     if not date_str:
+#         return None
+#     try:
+#         # Use dateutil.parser for flexible date parsing
+#         parsed_date = parser.parse(date_str)
+#         formatted_date = parsed_date.strftime('%d %b %Y')
+#         logger = logging.getLogger(__name__)
+#         logger.debug(f"Formatted date: {formatted_date} from '{date_str}'")
+#         return formatted_date
+#     except (ValueError, OverflowError) as ve:
+#         logger = logging.getLogger(__name__)
+#         logger.error(f"Date format error: {ve} for date '{date_str}'")
+#         return None
     
 
 # full and partial sync insert_ticker
+# Ensure the clean_date function is imported or defined in the same script
+# from utils.date_utils import clean_date
+
+
 def insert_ticker_data_into_db(conn, data, ticker, batch_size=100):
     """
     Inserts the list of stock data into the SQLite database in batches.
@@ -514,6 +560,11 @@ def insert_ticker_data_into_db(conn, data, ticker, batch_size=100):
                     errors.append(error_msg)
                     continue
 
+                # Log the formatted date
+                logger.debug(f"orignal date for record {idx}: {date_str}")
+
+                logger.debug(f"Formatted Date for record {idx}: {formatted_date}")
+
                 # Extract and clean numeric fields
                 open_ = clean_numeric(record.get('Open'), 'Open')
                 high = clean_numeric(record.get('High'), 'High')
@@ -525,13 +576,13 @@ def insert_ticker_data_into_db(conn, data, ticker, batch_size=100):
 
                 # Convert fields to appropriate data types
                 try:
-                    open_val = float(open_)
-                    high_val = float(high)
-                    low_val = float(low)
-                    close_val = float(close)
-                    change_val = float(change)
-                    change_p_val = round(float(change_p), 2)  # Round to two decimal places
-                    volume_val = int(float(volume))  # Ensure volume is an integer
+                    open_val = float(open_) if open_ is not None else None
+                    high_val = float(high) if high is not None else None
+                    low_val = float(low) if low is not None else None
+                    close_val = float(close) if close is not None else None
+                    change_val = float(change) if change is not None else None
+                    change_p_val = round(float(change_p), 2) if change_p is not None else None  # Round to two decimal places
+                    volume_val = int(float(volume)) if volume is not None else None  # Ensure volume is an integer
                 except (ValueError, TypeError) as ve:
                     error_msg = (
                         f"Data Preparation: Data type conversion error for ticker '{ticker}' on date '{formatted_date}'. "
@@ -558,6 +609,9 @@ def insert_ticker_data_into_db(conn, data, ticker, batch_size=100):
             logger.warning(warning_msg)
             errors.append(warning_msg)
             return False, records_added, errors
+
+        # Log the prepared data to be inserted
+        logger.debug(f"Data to be inserted for ticker '{ticker}': {data_to_insert}")
 
         # Insert data in batches
         total_records = len(data_to_insert)
@@ -588,8 +642,6 @@ def insert_ticker_data_into_db(conn, data, ticker, batch_size=100):
         logger.exception(error_msg)
         errors.append(error_msg)
         return False, records_added, errors
-
-
 
 
 def partial_sync_ticker(conn: sqlite3.Connection, date_to: str, 

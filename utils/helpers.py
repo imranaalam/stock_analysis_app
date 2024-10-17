@@ -42,30 +42,30 @@ def get_last_working_day(date):
     return date
 
 
-def clean_date(date_str: str) -> str:
-    """
-    Cleans and formats the date string to 'dd MMM YYYY'.
+# def clean_date(date_str: str) -> str:
+#     """
+#     Cleans and formats the date string to 'dd MMM YYYY'.
     
-    Args:
-        date_str (str): The original date string.
+#     Args:
+#         date_str (str): The original date string.
     
-    Returns:
-        str: Formatted date string or None if invalid.
-    """
-    if not date_str:
-        return None
-    try:
-        # Try parsing common date formats
-        for fmt in ('%Y-%m-%d', '%d %b %Y', '%Y-%m-%dT%H:%M:%S'):
-            try:
-                parsed_date = datetime.strptime(date_str, fmt)
-                return parsed_date.strftime('%d %b %Y')
-            except ValueError:
-                continue
-        # If none of the formats match, return None
-        return None
-    except Exception:
-        return None
+#     Returns:
+#         str: Formatted date string or None if invalid.
+#     """
+#     if not date_str:
+#         return None
+#     try:
+#         # Try parsing common date formats
+#         for fmt in ('%Y-%m-%d', '%d %b %Y', '%Y-%m-%dT%H:%M:%S'):
+#             try:
+#                 parsed_date = datetime.strptime(date_str, fmt)
+#                 return parsed_date.strftime('%d %b %Y')
+#             except ValueError:
+#                 continue
+#         # If none of the formats match, return None
+#         return None
+#     except Exception:
+#         return None
 
 
 def clean_numeric(value, field_name: str):
@@ -115,3 +115,47 @@ def get_last_five_working_days(reference_date=None, num_days=5):
     last_five = business_days[-num_days:]
     
     return [date.strftime('%Y-%m-%d') for date in last_five]
+
+
+
+def clean_date(date_str):
+    """
+    Cleans and formats the input date string to 'YYYY-MM-DD'.
+
+    Args:
+        date_str (str): The original date string.
+
+    Returns:
+        str or None: The formatted date string or None if parsing fails.
+    """
+    logger = logging.getLogger(__name__)
+    if not date_str or not isinstance(date_str, str):
+        logger.error(f"Invalid date input: {date_str}")
+        return None
+
+    # Define possible date formats
+    date_formats = [
+        "%Y-%m-%dT%H:%M:%S",  # e.g., '2020-01-01T00:00:00'
+        "%Y-%m-%d %H:%M:%S",  # e.g., '2020-01-01 00:00:00'
+        "%Y-%m-%d",           # e.g., '2020-01-01'
+        "%d %b %Y",           # e.g., '15 Jan 2020'
+        "%d %B %Y",           # e.g., '15 January 2020'
+        "%m/%d/%Y",           # e.g., '01/15/2020'
+        "%d/%m/%Y",           # e.g., '15/01/2020'
+        "%d-%m-%Y",           # e.g., '15-01-2020'
+        "%B %d, %Y",          # e.g., 'January 15, 2020'
+        "%b %d, %Y",          # e.g., 'Jan 15, 2020'
+    ]
+
+    for fmt in date_formats:
+        try:
+            parsed_date = datetime.strptime(date_str.strip(), fmt)
+            formatted_date = parsed_date.strftime("%Y-%m-%d")
+            logger.debug(f"Converted '{date_str}' to '{formatted_date}' using format '{fmt}'")
+            return formatted_date
+        except ValueError:
+            continue  # Try the next format
+
+    # If none of the formats match, log an error
+    logger.error(f"Unable to parse date: {date_str}")
+    return None

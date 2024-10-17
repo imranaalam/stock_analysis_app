@@ -448,8 +448,9 @@ def clean_date(date_str):
         logger = logging.getLogger(__name__)
         logger.error(f"Date format error: {ve} for date '{date_str}'")
         return None
+    
 
-# for partial ticker sync
+# full and partial sync insert_ticker
 def insert_ticker_data_into_db(conn, data, ticker, batch_size=100):
     """
     Inserts the list of stock data into the SQLite database in batches.
@@ -482,7 +483,7 @@ def insert_ticker_data_into_db(conn, data, ticker, batch_size=100):
                 logger.debug(f"Processing record {idx}/{len(data)} for ticker '{ticker}': {record}")
 
                 # Clean and validate the date field
-                date_str = record.get('Date')
+                date_str = record.get('Date') or record.get('Date_')
                 formatted_date = clean_date(date_str)
                 if not formatted_date:
                     error_msg = f"Data Preparation: Invalid or missing 'Date' field in record {idx} for ticker '{ticker}'. Skipping record."
@@ -496,7 +497,7 @@ def insert_ticker_data_into_db(conn, data, ticker, batch_size=100):
                 low = clean_numeric(record.get('Low'), 'Low')
                 close = clean_numeric(record.get('Close'), 'Close')
                 change = clean_numeric(record.get('Change'), 'Change')
-                change_p = clean_numeric(record.get('Change (%)'), 'Change (%)')
+                change_p = clean_numeric(record.get('Change (%)') or record.get('ChangeP'), 'Change (%)')
                 volume = clean_numeric(record.get('Volume'), 'Volume')
 
                 # Convert fields to appropriate data types
@@ -508,7 +509,7 @@ def insert_ticker_data_into_db(conn, data, ticker, batch_size=100):
                     change_val = float(change)
                     change_p_val = round(float(change_p), 2)  # Round to two decimal places
                     volume_val = int(float(volume))  # Ensure volume is an integer
-                except ValueError as ve:
+                except (ValueError, TypeError) as ve:
                     error_msg = (
                         f"Data Preparation: Data type conversion error for ticker '{ticker}' on date '{formatted_date}'. "
                         f"Failed to convert fields. Details: {ve}. "
@@ -545,14 +546,14 @@ def insert_ticker_data_into_db(conn, data, ticker, batch_size=100):
                 cursor.executemany(insert_query, batch)
                 conn.commit()
                 records_added += len(batch)  # Since executemany doesn't reliably return rowcount
-                logger.info(f"Inserted batch {i//batch_size + 1}: {len(batch)} records for ticker '{ticker}'.")
+                logger.info(f"Inserted batch {i // batch_size + 1}: {len(batch)} records for ticker '{ticker}'.")
             except sqlite3.Error as e:
-                error_msg = f"Database insertion error for ticker '{ticker}' in batch {i//batch_size + 1}: {e}."
+                error_msg = f"Database insertion error for ticker '{ticker}' in batch {i // batch_size + 1}: {e}."
                 logger.error(error_msg)
                 errors.append(error_msg)
                 continue
 
-            # Log the first three inserted records in this batch for verification
+            # Log the first three inserted records in the first batch for verification
             if i == 0 and len(batch) >= 3:
                 logger.debug(f"First 3 records inserted for ticker '{ticker}': {batch[:3]}")
 
@@ -565,154 +566,269 @@ def insert_ticker_data_into_db(conn, data, ticker, batch_size=100):
         errors.append(error_msg)
         return False, records_added, errors
 
+# # for partial ticker sync
+# def insert_ticker_data_into_db(conn, data, ticker, batch_size=100):
+#     """
+#     Inserts the list of stock data into the SQLite database in batches.
+#     Returns a tuple of (success, records_added, errors).
+
+#     Args:
+#         conn (sqlite3.Connection): SQLite database connection.
+#         data (list): List of dictionaries containing ticker data.
+#         ticker (str): The ticker symbol.
+#         batch_size (int): Number of records to insert per batch.
+
+#     Returns:
+#         tuple: (success (bool), records_added (int), errors (list))
+#     """
+#     logger = logging.getLogger(__name__)
+#     errors = []
+#     records_added = 0
+#     try:
+#         cursor = conn.cursor()
+#         insert_query = """
+#             INSERT OR REPLACE INTO Ticker 
+#             (Ticker, Date, Open, High, Low, Close, Change, "Change (%)", Volume) 
+#             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+#         """
+
+#         # Prepare data for insertion
+#         data_to_insert = []
+#         for idx, record in enumerate(data, start=1):
+#             try:
+#                 logger.debug(f"Processing record {idx}/{len(data)} for ticker '{ticker}': {record}")
+
+#                 # Clean and validate the date field
+#                 date_str = record.get('Date')
+#                 formatted_date = clean_date(date_str)
+#                 if not formatted_date:
+#                     error_msg = f"Data Preparation: Invalid or missing 'Date' field in record {idx} for ticker '{ticker}'. Skipping record."
+#                     logger.error(error_msg)
+#                     errors.append(error_msg)
+#                     continue
+
+#                 # Extract and clean numeric fields
+#                 open_ = clean_numeric(record.get('Open'), 'Open')
+#                 high = clean_numeric(record.get('High'), 'High')
+#                 low = clean_numeric(record.get('Low'), 'Low')
+#                 close = clean_numeric(record.get('Close'), 'Close')
+#                 change = clean_numeric(record.get('Change'), 'Change')
+#                 change_p = clean_numeric(record.get('Change (%)'), 'Change (%)')
+#                 volume = clean_numeric(record.get('Volume'), 'Volume')
+
+#                 # Convert fields to appropriate data types
+#                 try:
+#                     open_val = float(open_)
+#                     high_val = float(high)
+#                     low_val = float(low)
+#                     close_val = float(close)
+#                     change_val = float(change)
+#                     change_p_val = round(float(change_p), 2)  # Round to two decimal places
+#                     volume_val = int(float(volume))  # Ensure volume is an integer
+#                 except ValueError as ve:
+#                     error_msg = (
+#                         f"Data Preparation: Data type conversion error for ticker '{ticker}' on date '{formatted_date}'. "
+#                         f"Failed to convert fields. Details: {ve}. "
+#                         f"Cleaned data - Open: '{open_}', High: '{high}', Low: '{low}', "
+#                         f"Close: '{close}', Change: '{change}', ChangeP: '{change_p}', Volume: '{volume}'. "
+#                         f"Original record: {record}."
+#                     )
+#                     logger.error(error_msg)
+#                     errors.append(error_msg)
+#                     continue
+
+#                 # Append the cleaned and converted data as a tuple
+#                 data_to_insert.append((ticker, formatted_date, open_val, high_val, low_val, close_val, change_val, change_p_val, volume_val))
+
+#             except Exception as e:
+#                 error_msg = f"Unexpected error while processing record {idx} for ticker '{ticker}': {e}. Skipping record."
+#                 logger.exception(error_msg)
+#                 errors.append(error_msg)
+#                 continue
+
+#         if not data_to_insert:
+#             warning_msg = f"No valid records to insert for ticker '{ticker}'."
+#             logger.warning(warning_msg)
+#             errors.append(warning_msg)
+#             return False, records_added, errors
+
+#         # Insert data in batches
+#         total_records = len(data_to_insert)
+#         logger.info(f"Starting database insertion for ticker '{ticker}' with {total_records} records.")
+
+#         for i in range(0, total_records, batch_size):
+#             batch = data_to_insert[i:i + batch_size]
+#             try:
+#                 cursor.executemany(insert_query, batch)
+#                 conn.commit()
+#                 records_added += len(batch)  # Since executemany doesn't reliably return rowcount
+#                 logger.info(f"Inserted batch {i//batch_size + 1}: {len(batch)} records for ticker '{ticker}'.")
+#             except sqlite3.Error as e:
+#                 error_msg = f"Database insertion error for ticker '{ticker}' in batch {i//batch_size + 1}: {e}."
+#                 logger.error(error_msg)
+#                 errors.append(error_msg)
+#                 continue
+
+#             # Log the first three inserted records in this batch for verification
+#             if i == 0 and len(batch) >= 3:
+#                 logger.debug(f"First 3 records inserted for ticker '{ticker}': {batch[:3]}")
+
+#         logger.info(f"Successfully inserted/updated {records_added} records for ticker '{ticker}'.")
+#         return True, records_added, errors
+
+#     except Exception as e:
+#         error_msg = f"Failed to insert data into database for ticker '{ticker}': {e}"
+#         logger.exception(error_msg)
+#         errors.append(error_msg)
+#         return False, records_added, errors
 
 
 
-# for synchronize database
 
-def insert_ticker_data_into_db2(conn, data, ticker, batch_size=100):
-    """
-    Inserts the list of stock data into the SQLite database in batches.
-    Returns a tuple of (success, records_added, errors).
+# # for synchronize database
+# def insert_ticker_data_into_db(conn, data, ticker, batch_size=100):
+#     """
+#     Inserts the list of stock data into the SQLite database in batches.
+#     Returns a tuple of (success, records_added, errors).
 
-    Args:
-        conn (sqlite3.Connection): SQLite database connection.
-        data (list): List of dictionaries containing ticker data.
-        ticker (str): The ticker symbol.
-        batch_size (int): Number of records to insert per batch.
+#     Args:
+#         conn (sqlite3.Connection): SQLite database connection.
+#         data (list): List of dictionaries containing ticker data.
+#         ticker (str): The ticker symbol.
+#         batch_size (int): Number of records to insert per batch.
 
-    Returns:
-        tuple: (success (bool), records_added (int), errors (list))
-    """
-    errors = []
-    records_added = 0
-    try:
-        cursor = conn.cursor()
-        insert_query = """
-            INSERT OR REPLACE INTO Ticker 
-            (Ticker, Date, Open, High, Low, Close, Change, "Change (%)", Volume) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
-        """
+#     Returns:
+#         tuple: (success (bool), records_added (int), errors (list))
+#     """
+#     errors = []
+#     records_added = 0
+#     try:
+#         cursor = conn.cursor()
+#         insert_query = """
+#             INSERT OR REPLACE INTO Ticker 
+#             (Ticker, Date, Open, High, Low, Close, Change, "Change (%)", Volume) 
+#             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+#         """
 
-        # Prepare data for insertion
-        data_to_insert = []
-        for idx, record in enumerate(data, start=1):
-            try:
-                logging.info(f"Processing record {idx}/{len(data)} for ticker '{ticker}': {record}")
+#         # Prepare data for insertion
+#         data_to_insert = []
+#         for idx, record in enumerate(data, start=1):
+#             try:
+#                 logging.info(f"Processing record {idx}/{len(data)} for ticker '{ticker}': {record}")
 
-                # Map 'Date_' to 'Date'
-                date_str = record.get('Date_')
-                if not date_str:
-                    error_msg = f"❌ 'Date_' field is missing in record {idx} for ticker '{ticker}'. Skipping record."
-                    logging.error(error_msg)
-                    errors.append(error_msg)
-                    continue
+#                 # Map 'Date_' to 'Date'
+#                 date_str = record.get('Date_')
+#                 if not date_str:
+#                     error_msg = f"❌ 'Date_' field is missing in record {idx} for ticker '{ticker}'. Skipping record."
+#                     logging.error(error_msg)
+#                     errors.append(error_msg)
+#                     continue
 
-                # Attempt to parse and format the date
-                try:
-                    # Handle ISO format dates
-                    if 'T' in date_str:
-                        parsed_date = datetime.strptime(date_str, '%Y-%m-%dT%H:%M:%S')
-                    else:
-                        # Handle other possible date formats if necessary
-                        parsed_date = datetime.strptime(date_str, '%Y-%m-%d')
-                    formatted_date = parsed_date.strftime('%d %b %Y')
-                    logging.info(f"Formatted date for ticker '{ticker}': {formatted_date}")
-                except ValueError as ve:
-                    error_msg = f"❌ Date format error for ticker '{ticker}' with date '{date_str}': {ve}. Skipping record."
-                    logging.error(error_msg)
-                    errors.append(error_msg)
-                    continue
+#                 # Attempt to parse and format the date
+#                 try:
+#                     # Handle ISO format dates
+#                     if 'T' in date_str:
+#                         parsed_date = datetime.strptime(date_str, '%Y-%m-%dT%H:%M:%S')
+#                     else:
+#                         # Handle other possible date formats if necessary
+#                         parsed_date = datetime.strptime(date_str, '%Y-%m-%d')
+#                     formatted_date = parsed_date.strftime('%d %b %Y')
+#                     logging.info(f"Formatted date for ticker '{ticker}': {formatted_date}")
+#                 except ValueError as ve:
+#                     error_msg = f"❌ Date format error for ticker '{ticker}' with date '{date_str}': {ve}. Skipping record."
+#                     logging.error(error_msg)
+#                     errors.append(error_msg)
+#                     continue
 
-                # Extract and clean numeric fields
-                open_ = record.get('Open')
-                high = record.get('High')
-                low = record.get('Low')
-                close = record.get('Close')
-                change = record.get('Change')
-                change_p = record.get('ChangeP')  # Assuming 'ChangeP' is always present
-                volume = record.get('Volume')
+#                 # Extract and clean numeric fields
+#                 open_ = record.get('Open')
+#                 high = record.get('High')
+#                 low = record.get('Low')
+#                 close = record.get('Close')
+#                 change = record.get('Change')
+#                 change_p = record.get('ChangeP')  # Assuming 'ChangeP' is always present
+#                 volume = record.get('Volume')
 
-                # Log extracted fields
-                logging.info(f"Extracted fields for ticker '{ticker}': Open={open_}, High={high}, Low={low}, Close={close}, Change={change}, ChangeP={change_p}, Volume={volume}")
+#                 # Log extracted fields
+#                 logging.info(f"Extracted fields for ticker '{ticker}': Open={open_}, High={high}, Low={low}, Close={close}, Change={change}, ChangeP={change_p}, Volume={volume}")
 
-                # Data Cleaning: Ensure numeric fields are correctly formatted
-                def clean_numeric(value, field_name):
-                    if isinstance(value, str):
-                        cleaned_value = value.replace(',', '').strip()
-                        logging.debug(f"Cleaned '{field_name}': '{value}' -> '{cleaned_value}'")
-                        return cleaned_value
-                    return value
+#                 # Data Cleaning: Ensure numeric fields are correctly formatted
+#                 def clean_numeric(value, field_name):
+#                     if isinstance(value, str):
+#                         cleaned_value = value.replace(',', '').strip()
+#                         logging.debug(f"Cleaned '{field_name}': '{value}' -> '{cleaned_value}'")
+#                         return cleaned_value
+#                     return value
 
-                open_ = clean_numeric(open_, 'Open')
-                high = clean_numeric(high, 'High')
-                low = clean_numeric(low, 'Low')
-                close = clean_numeric(close, 'Close')
-                change = clean_numeric(change, 'Change')
-                change_p = clean_numeric(change_p, 'ChangeP')
-                volume = clean_numeric(volume, 'Volume')
+#                 open_ = clean_numeric(open_, 'Open')
+#                 high = clean_numeric(high, 'High')
+#                 low = clean_numeric(low, 'Low')
+#                 close = clean_numeric(close, 'Close')
+#                 change = clean_numeric(change, 'Change')
+#                 change_p = clean_numeric(change_p, 'ChangeP')
+#                 volume = clean_numeric(volume, 'Volume')
 
-                # Convert fields to appropriate data types
-                try:
-                    open_ = float(open_)
-                    high = float(high)
-                    low = float(low)
-                    close = float(close)
-                    change = float(change)
-                    change_p = round(float(change_p), 2)  # Round to two decimal places
-                    volume = int(float(volume))  # Ensure volume is an integer
-                except ValueError as ve:
-                    error_msg = f"❌ Data type conversion error for ticker '{ticker}' on date '{formatted_date}': {ve}. Skipping record."
-                    logging.error(error_msg)
-                    errors.append(error_msg)
-                    continue
+#                 # Convert fields to appropriate data types
+#                 try:
+#                     open_ = float(open_)
+#                     high = float(high)
+#                     low = float(low)
+#                     close = float(close)
+#                     change = float(change)
+#                     change_p = round(float(change_p), 2)  # Round to two decimal places
+#                     volume = int(float(volume))  # Ensure volume is an integer
+#                 except ValueError as ve:
+#                     error_msg = f"❌ Data type conversion error for ticker '{ticker}' on date '{formatted_date}': {ve}. Skipping record."
+#                     logging.error(error_msg)
+#                     errors.append(error_msg)
+#                     continue
 
-                logging.info(f"Converted fields for ticker '{ticker}': Open={open_}, High={high}, Low={low}, Close={close}, Change={change}, ChangeP={change_p}, Volume={volume}")
+#                 logging.info(f"Converted fields for ticker '{ticker}': Open={open_}, High={high}, Low={low}, Close={close}, Change={change}, ChangeP={change_p}, Volume={volume}")
 
-                # Append the cleaned and converted data as a tuple
-                data_to_insert.append((ticker, formatted_date, open_, high, low, close, change, change_p, volume))
+#                 # Append the cleaned and converted data as a tuple
+#                 data_to_insert.append((ticker, formatted_date, open_, high, low, close, change, change_p, volume))
 
-            except Exception as e:
-                error_msg = f"❌ Unexpected error while processing record {idx} for ticker '{ticker}': {e}. Skipping record."
-                logging.exception(error_msg)
-                errors.append(error_msg)
-                continue
+#             except Exception as e:
+#                 error_msg = f"❌ Unexpected error while processing record {idx} for ticker '{ticker}': {e}. Skipping record."
+#                 logging.exception(error_msg)
+#                 errors.append(error_msg)
+#                 continue
 
-        if not data_to_insert:
-            warning_msg = f"⚠️ No valid records to insert for ticker '{ticker}'."
-            logging.warning(warning_msg)
-            errors.append(warning_msg)
-            return False, records_added, errors
+#         if not data_to_insert:
+#             warning_msg = f"⚠️ No valid records to insert for ticker '{ticker}'."
+#             logging.warning(warning_msg)
+#             errors.append(warning_msg)
+#             return False, records_added, errors
 
-        # Insert data in batches
-        total_records = len(data_to_insert)
-        logging.info(f"Starting database insertion for ticker '{ticker}' with {total_records} records.")
+#         # Insert data in batches
+#         total_records = len(data_to_insert)
+#         logging.info(f"Starting database insertion for ticker '{ticker}' with {total_records} records.")
 
-        for i in range(0, total_records, batch_size):
-            batch = data_to_insert[i:i + batch_size]
-            try:
-                cursor.executemany(insert_query, batch)
-                conn.commit()
-                records_added += cursor.rowcount
-                logging.info(f"Inserted batch {i//batch_size + 1}: {len(batch)} records for ticker '{ticker}'.")
-            except sqlite3.Error as e:
-                error_msg = f"❌ Database insertion error for ticker '{ticker}' in batch {i//batch_size + 1}: {e}."
-                logging.error(error_msg)
-                errors.append(error_msg)
-                continue
+#         for i in range(0, total_records, batch_size):
+#             batch = data_to_insert[i:i + batch_size]
+#             try:
+#                 cursor.executemany(insert_query, batch)
+#                 conn.commit()
+#                 records_added += cursor.rowcount
+#                 logging.info(f"Inserted batch {i//batch_size + 1}: {len(batch)} records for ticker '{ticker}'.")
+#             except sqlite3.Error as e:
+#                 error_msg = f"❌ Database insertion error for ticker '{ticker}' in batch {i//batch_size + 1}: {e}."
+#                 logging.error(error_msg)
+#                 errors.append(error_msg)
+#                 continue
 
-            # Log the first three inserted records in this batch for verification
-            if i == 0 and len(batch) >= 3:
-                logging.debug(f"First 3 records inserted for ticker '{ticker}': {batch[:3]}")
+#             # Log the first three inserted records in this batch for verification
+#             if i == 0 and len(batch) >= 3:
+#                 logging.debug(f"First 3 records inserted for ticker '{ticker}': {batch[:3]}")
 
-        logging.info(f"✅ Successfully inserted/updated {records_added} records for ticker '{ticker}'.")
-        return True, records_added, errors
+#         logging.info(f"✅ Successfully inserted/updated {records_added} records for ticker '{ticker}'.")
+#         return True, records_added, errors
 
-    except Exception as e:
-        error_msg = f"❌ Failed to insert data into database for ticker '{ticker}': {e}"
-        logging.exception(error_msg)
-        errors.append(error_msg)
-        return False, records_added, errors
+#     except Exception as e:
+#         error_msg = f"❌ Failed to insert data into database for ticker '{ticker}': {e}"
+#         logging.exception(error_msg)
+#         errors.append(error_msg)
+#         return False, records_added, errors
 
 
 

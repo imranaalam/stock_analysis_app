@@ -13,7 +13,6 @@
 |-- databasestructure.py
 |-- database_structure_and_samples.txt
 |-- functionalities
-    |-- add_new_ticker.py
     |-- analyze_tickers.py
     |-- manage_portfolios.py
     |-- synchronize_database.py
@@ -32,6 +31,7 @@
     |-- test_data_download.py
     |-- test_mxll.py
 |-- utils
+    |-- add_new_ticker.py
     |-- data_fetcher.py
     |-- db_manager.py
     |-- helpers.py

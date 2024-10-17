@@ -87,3 +87,31 @@ def clean_numeric(value, field_name: str):
     except Exception as e:
         logging.debug(f"Error cleaning numeric field '{field_name}': {e}")
         return value
+    
+
+
+def get_last_five_working_days(reference_date=None, num_days=5):
+    """
+    Retrieves the last 'num_days' working days before the reference_date.
+    
+    Args:
+        reference_date (datetime or str, optional): The date to calculate from. Defaults to today.
+        num_days (int, optional): Number of working days to retrieve. Defaults to 5.
+    
+    Returns:
+        list: List of dates in 'YYYY-MM-DD' format.
+    """
+    if reference_date:
+        if isinstance(reference_date, str):
+            reference_date = datetime.strptime(reference_date, '%Y-%m-%d')
+    else:
+        reference_date = datetime.now()
+    
+    # Use pandas bdate_range to get business days (Monday-Friday)
+    end_date = reference_date - timedelta(days=1)  # Start from the day before the reference date
+    start_date = end_date - timedelta(days=num_days*2)  # Approximate start date
+    
+    business_days = pd.bdate_range(start=start_date, end=end_date)
+    last_five = business_days[-num_days:]
+    
+    return [date.strftime('%Y-%m-%d') for date in last_five]

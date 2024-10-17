@@ -223,7 +223,7 @@ def get_stock_data(ticker, date_from, date_to):
             return None
 
         # Log the first three rows for debugging
-        logging.info(f"First 3 records for ticker '{ticker}': {data[:3]}...")
+        # logging.info(f"First 3 records for ticker '{ticker}': {data[:3]}...")
 
         logging.info(f"Retrieved {len(data)} records for ticker '{ticker}'.")
         return data
@@ -232,157 +232,102 @@ def get_stock_data(ticker, date_from, date_to):
         return None
 
 
-# for synchronize database
-def get_stock_data(ticker, date_from, date_to):
-    """
-    Fetches stock data from the Investors Lounge API for a given ticker and date range.
 
-    Args:
-        ticker (str): The stock ticker symbol.
-        date_from (str): Start date in 'DD MMM YYYY' format.
-        date_to (str): End date in 'DD MMM YYYY' format.
-
-    Returns:
-        list: A list of dictionaries containing stock data or None if failed.
-    """
-    url = "https://www.investorslounge.com/Default/SendPostRequest"
-
-    headers = {
-        "Accept": "*/*",
-        "Accept-Language": "en-US,en;q=0.9,ps;q=0.8",
-        "Content-Type": "application/json; charset=UTF-8",
-        "Priority": "u=1, i",
-        "Sec-CH-UA": "\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"",
-        "Sec-CH-UA-Mobile": "?0",
-        "Sec-CH-UA-Platform": "\"Windows\"",
-        "Sec-Fetch-Dest": "empty",
-        "Sec-Fetch-Mode": "cors",
-        "Sec-Fetch-Site": "same-origin",
-        "X-Requested-With": "XMLHttpRequest"
-    }
-
-    payload = {
-        "url": "PriceHistory/GetPriceHistoryCompanyWise",
-        "data": json.dumps({
-            "company": ticker,
-            "sort": "0",
-            "DateFrom": date_from,
-            "DateTo": date_to,
-            "key": ""
-        })
-    }
-
-
-    try:
-        response = requests.post(url, headers=headers, json=payload, timeout=60)
-        response.raise_for_status()
-    except requests.exceptions.RequestException as e:
-        logging.error(f"HTTP Request failed for ticker '{ticker}': {e}")
-        return None
-
-    try:
-        data = response.json()
-        if not isinstance(data, list):
-            logging.error(f"Unexpected JSON structure for ticker '{ticker}': Expected a list of records.")
-            return None
-        logging.debug(f"Raw data fetched for ticker '{ticker}': {data[:2]}...")  # Log first 2 records for brevity
-        logging.info(f"Retrieved {len(data)} records for ticker '{ticker}'.")
-        return data
-    except json.JSONDecodeError:
-        logging.error(f"Failed to parse JSON response for ticker '{ticker}'.")
-        return None
 
 
 
 # # for partial ticker sync
-async def async_get_stock_data(session, ticker, date_from, date_to):
-    """
-    Asynchronously fetches stock data from the Investors Lounge API for a given ticker and date range.
+# async def async_get_stock_data(session, ticker, date_from, date_to):
+#     """
+#     Asynchronously fetches stock data from the Investors Lounge API for a given ticker and date range.
 
-    Args:
-        session (aiohttp.ClientSession): The aiohttp session to use for the request.
-        ticker (str): The stock ticker symbol.
-        date_from (str): Start date in 'DD MMM YYYY' format.
-        date_to (str): End date in 'DD MMM YYYY' format.
+#     Args:
+#         session (aiohttp.ClientSession): The aiohttp session to use for the request.
+#         ticker (str): The stock ticker symbol.
+#         date_from (str): Start date in 'DD MMM YYYY' format.
+#         date_to (str): End date in 'DD MMM YYYY' format.
 
-    Returns:
-        list: List of stock data dictionaries or None if failed.
-    """
-    url = "https://www.investorslounge.com/Default/SendPostRequest"
+#     Returns:
+#         list: List of stock data dictionaries or None if failed.
+#     """
+#     url = "https://www.investorslounge.com/Default/SendPostRequest"
 
-    headers = {
-        "Accept": "*/*",
-        "Accept-Language": "en-US,en;q=0.9,ps;q=0.8",
-        "Content-Type": "application/json; charset=UTF-8",
-        "Priority": "u=1, i",
-        "Sec-CH-UA": "\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"",
-        "Sec-CH-UA-Mobile": "?0",
-        "Sec-CH-UA-Platform": "\"Windows\"",
-        "Sec-Fetch-Dest": "empty",
-        "Sec-Fetch-Mode": "cors",
-        "Sec-Fetch-Site": "same-origin",
-        "X-Requested-With": "XMLHttpRequest"
-    }
+#     headers = {
+#         "Accept": "*/*",
+#         "Accept-Language": "en-US,en;q=0.9,ps;q=0.8",
+#         "Content-Type": "application/json; charset=UTF-8",
+#         "Priority": "u=1, i",
+#         "Sec-CH-UA": "\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"",
+#         "Sec-CH-UA-Mobile": "?0",
+#         "Sec-CH-UA-Platform": "\"Windows\"",
+#         "Sec-Fetch-Dest": "empty",
+#         "Sec-Fetch-Mode": "cors",
+#         "Sec-Fetch-Site": "same-origin",
+#         "X-Requested-With": "XMLHttpRequest"
+#     }
 
-    payload = {
-        "url": "PriceHistory/GetPriceHistoryCompanyWise",
-        "data": json.dumps({
-            "company": ticker,
-            "sort": "0",
-            "DateFrom": date_from,
-            "DateTo": date_to,
-            "key": ""
-        })
-    }
+#     payload = {
+#         "url": "PriceHistory/GetPriceHistoryCompanyWise",
+#         "data": json.dumps({
+#             "company": ticker,
+#             "sort": "0",
+#             "DateFrom": date_from,
+#             "DateTo": date_to,
+#             "key": ""
+#         })
+#     }
 
-    try:
-        async with session.post(url, headers=headers, json=payload, timeout=60) as response:
-            response.raise_for_status()
-            data = await response.json()
-            if not isinstance(data, list):
-                logging.error(f"Unexpected JSON structure for ticker '{ticker}': Expected a list of records.")
-                return None
-            logging.info(f"Retrieved {len(data)} records for ticker '{ticker}'.")
-            return data
-    except aiohttp.ClientError as e:
-        logging.error(f"HTTP Request failed for ticker '{ticker}': {e}")
-        return None
-    except json.JSONDecodeError:
-        logging.error(f"Failed to parse JSON response for ticker '{ticker}'.")
-        return None
+#     try:
+#         async with session.post(url, headers=headers, json=payload, timeout=60) as response:
+#             response.raise_for_status()
+#             data = await response.json()
+#             if not isinstance(data, list):
+#                 logging.error(f"Unexpected JSON structure for ticker '{ticker}': Expected a list of records.")
+#                 return None
+#             logging.info(f"Retrieved {len(data)} records for ticker '{ticker}'.")
+#             return data
+#     except aiohttp.ClientError as e:
+#         logging.error(f"HTTP Request failed for ticker '{ticker}': {e}")
+#         return None
+#     except json.JSONDecodeError:
+#         logging.error(f"Failed to parse JSON response for ticker '{ticker}'.")
+#         return None
     
 
 
 
 
-async def fetch_all_tickers_data(tickers, date_from, date_to):
-    """
-    Asynchronously fetches stock data for all tickers.
+# async def fetch_all_tickers_data(tickers, date_from, date_to):
+#     """
+#     Asynchronously fetches stock data for all tickers.
 
-    Args:
-        tickers (list): List of ticker symbols.
-        date_from (str): Start date in 'DD MMM YYYY' format.
-        date_to (str): End date in 'DD MMM YYYY' format.
+#     Args:
+#         tickers (list): List of ticker symbols.
+#         date_from (str): Start date in 'DD MMM YYYY' format.
+#         date_to (str): End date in 'DD MMM YYYY' format.
 
-    Returns:
-        dict: Dictionary with ticker symbols as keys and their data as values.
-    """
-    async with aiohttp.ClientSession() as session:
-        tasks = []
-        for ticker in tickers:
-            task = asyncio.ensure_future(async_get_stock_data(session, ticker, date_from, date_to))
-            tasks.append((ticker, task))
+#     Returns:
+#         dict: Dictionary with ticker symbols as keys and their data as values.
+#     """
+#     async with aiohttp.ClientSession() as session:
+#         tasks = []
+#         for ticker in tickers:
+#             task = asyncio.ensure_future(async_get_stock_data(session, ticker, date_from, date_to))
+#             tasks.append((ticker, task))
 
-        results = await asyncio.gather(*[task for _, task in tasks], return_exceptions=True)
+#         results = await asyncio.gather(*[task for _, task in tasks], return_exceptions=True)
 
-        ticker_data = {}
-        for (ticker, _), result in zip(tasks, results):
-            if isinstance(result, Exception):
-                logging.error(f"Exception occurred while fetching data for ticker '{ticker}': {result}")
-                ticker_data[ticker] = None
-            else:
-                ticker_data[ticker] = result
-        return ticker_data
+#         ticker_data = {}
+#         for (ticker, _), result in zip(tasks, results):
+#             if isinstance(result, Exception):
+#                 logging.error(f"Exception occurred while fetching data for ticker '{ticker}': {result}")
+#                 ticker_data[ticker] = None
+#             else:
+#                 ticker_data[ticker] = result
+#         return ticker_data
+
+
+
 
 
 
@@ -890,19 +835,7 @@ def main():
 # This block ensures that the main function is only executed when the script is run directly.
 if __name__ == "__main__":
     # Test with a known valid date (e.g., last working day)
+    main()
 
-    date_input = "2024-10-15"
-    try:
-        html_data = fetch_historical_data(date_input)  # Fetch the HTML for the specific date
-        if html_data:
-            df = parse_html_to_df(html_data)  # Parse and get the DataFrame
-            if not df.empty:
-                print("Parsed DataFrame:")
-                print(df.head())
-            else:
-                print("Parsed DataFrame is empty.")
-        else:
-            print("Failed to fetch HTML data.")
-    except Exception as e:
-        print(f"An error occurred: {e}")
+
 

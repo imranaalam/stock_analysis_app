@@ -14,8 +14,6 @@ from utils.data_fetcher import (
     fetch_psx_transaction_data,
     fetch_psx_constituents,
     get_stock_data,
-    async_get_stock_data, 
-    fetch_all_tickers_data,
     parse_html_to_df,
     fetch_psx_historical
 
@@ -26,8 +24,10 @@ from utils.data_fetcher import (
 from utils.logger import setup_logging
 import asyncio
 import aiohttp
-from utils.data_fetcher import async_get_stock_data
+
 from utils.helpers import get_last_working_day
+
+import re
 
 
 
@@ -163,9 +163,32 @@ def initialize_db_and_tables(db_path='data/tick_data.db'):
 
 
 
-import re
-
-
+def clean_ticker_table(conn):
+    """
+    Deletes all records from the Ticker table and cleans it.
+    
+    Args:
+        conn (sqlite3.Connection): A connection object to the SQLite database.
+        
+    Returns:
+        bool: True if the operation is successful, False otherwise.
+    """
+    try:
+        cursor = conn.cursor()
+        
+        # Delete all rows from the Ticker table
+        cursor.execute("DELETE FROM Ticker;")
+        
+        # Reset the auto-incrementing primary key, if needed (in case there's an AUTOINCREMENT column)
+        # Not necessary here since the primary key in the Ticker table is a composite key (Ticker, Date)
+        
+        # Commit changes
+        conn.commit()
+        logging.info("Ticker table has been cleaned.")
+        return True
+    except sqlite3.Error as e:
+        logging.error(f"Failed to clean Ticker table: {e}")
+        return False
 
 
 
@@ -565,272 +588,6 @@ def insert_ticker_data_into_db(conn, data, ticker, batch_size=100):
         logger.exception(error_msg)
         errors.append(error_msg)
         return False, records_added, errors
-
-# # for partial ticker sync
-# def insert_ticker_data_into_db(conn, data, ticker, batch_size=100):
-#     """
-#     Inserts the list of stock data into the SQLite database in batches.
-#     Returns a tuple of (success, records_added, errors).
-
-#     Args:
-#         conn (sqlite3.Connection): SQLite database connection.
-#         data (list): List of dictionaries containing ticker data.
-#         ticker (str): The ticker symbol.
-#         batch_size (int): Number of records to insert per batch.
-
-#     Returns:
-#         tuple: (success (bool), records_added (int), errors (list))
-#     """
-#     logger = logging.getLogger(__name__)
-#     errors = []
-#     records_added = 0
-#     try:
-#         cursor = conn.cursor()
-#         insert_query = """
-#             INSERT OR REPLACE INTO Ticker 
-#             (Ticker, Date, Open, High, Low, Close, Change, "Change (%)", Volume) 
-#             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
-#         """
-
-#         # Prepare data for insertion
-#         data_to_insert = []
-#         for idx, record in enumerate(data, start=1):
-#             try:
-#                 logger.debug(f"Processing record {idx}/{len(data)} for ticker '{ticker}': {record}")
-
-#                 # Clean and validate the date field
-#                 date_str = record.get('Date')
-#                 formatted_date = clean_date(date_str)
-#                 if not formatted_date:
-#                     error_msg = f"Data Preparation: Invalid or missing 'Date' field in record {idx} for ticker '{ticker}'. Skipping record."
-#                     logger.error(error_msg)
-#                     errors.append(error_msg)
-#                     continue
-
-#                 # Extract and clean numeric fields
-#                 open_ = clean_numeric(record.get('Open'), 'Open')
-#                 high = clean_numeric(record.get('High'), 'High')
-#                 low = clean_numeric(record.get('Low'), 'Low')
-#                 close = clean_numeric(record.get('Close'), 'Close')
-#                 change = clean_numeric(record.get('Change'), 'Change')
-#                 change_p = clean_numeric(record.get('Change (%)'), 'Change (%)')
-#                 volume = clean_numeric(record.get('Volume'), 'Volume')
-
-#                 # Convert fields to appropriate data types
-#                 try:
-#                     open_val = float(open_)
-#                     high_val = float(high)
-#                     low_val = float(low)
-#                     close_val = float(close)
-#                     change_val = float(change)
-#                     change_p_val = round(float(change_p), 2)  # Round to two decimal places
-#                     volume_val = int(float(volume))  # Ensure volume is an integer
-#                 except ValueError as ve:
-#                     error_msg = (
-#                         f"Data Preparation: Data type conversion error for ticker '{ticker}' on date '{formatted_date}'. "
-#                         f"Failed to convert fields. Details: {ve}. "
-#                         f"Cleaned data - Open: '{open_}', High: '{high}', Low: '{low}', "
-#                         f"Close: '{close}', Change: '{change}', ChangeP: '{change_p}', Volume: '{volume}'. "
-#                         f"Original record: {record}."
-#                     )
-#                     logger.error(error_msg)
-#                     errors.append(error_msg)
-#                     continue
-
-#                 # Append the cleaned and converted data as a tuple
-#                 data_to_insert.append((ticker, formatted_date, open_val, high_val, low_val, close_val, change_val, change_p_val, volume_val))
-
-#             except Exception as e:
-#                 error_msg = f"Unexpected error while processing record {idx} for ticker '{ticker}': {e}. Skipping record."
-#                 logger.exception(error_msg)
-#                 errors.append(error_msg)
-#                 continue
-
-#         if not data_to_insert:
-#             warning_msg = f"No valid records to insert for ticker '{ticker}'."
-#             logger.warning(warning_msg)
-#             errors.append(warning_msg)
-#             return False, records_added, errors
-
-#         # Insert data in batches
-#         total_records = len(data_to_insert)
-#         logger.info(f"Starting database insertion for ticker '{ticker}' with {total_records} records.")
-
-#         for i in range(0, total_records, batch_size):
-#             batch = data_to_insert[i:i + batch_size]
-#             try:
-#                 cursor.executemany(insert_query, batch)
-#                 conn.commit()
-#                 records_added += len(batch)  # Since executemany doesn't reliably return rowcount
-#                 logger.info(f"Inserted batch {i//batch_size + 1}: {len(batch)} records for ticker '{ticker}'.")
-#             except sqlite3.Error as e:
-#                 error_msg = f"Database insertion error for ticker '{ticker}' in batch {i//batch_size + 1}: {e}."
-#                 logger.error(error_msg)
-#                 errors.append(error_msg)
-#                 continue
-
-#             # Log the first three inserted records in this batch for verification
-#             if i == 0 and len(batch) >= 3:
-#                 logger.debug(f"First 3 records inserted for ticker '{ticker}': {batch[:3]}")
-
-#         logger.info(f"Successfully inserted/updated {records_added} records for ticker '{ticker}'.")
-#         return True, records_added, errors
-
-#     except Exception as e:
-#         error_msg = f"Failed to insert data into database for ticker '{ticker}': {e}"
-#         logger.exception(error_msg)
-#         errors.append(error_msg)
-#         return False, records_added, errors
-
-
-
-
-# # for synchronize database
-# def insert_ticker_data_into_db(conn, data, ticker, batch_size=100):
-#     """
-#     Inserts the list of stock data into the SQLite database in batches.
-#     Returns a tuple of (success, records_added, errors).
-
-#     Args:
-#         conn (sqlite3.Connection): SQLite database connection.
-#         data (list): List of dictionaries containing ticker data.
-#         ticker (str): The ticker symbol.
-#         batch_size (int): Number of records to insert per batch.
-
-#     Returns:
-#         tuple: (success (bool), records_added (int), errors (list))
-#     """
-#     errors = []
-#     records_added = 0
-#     try:
-#         cursor = conn.cursor()
-#         insert_query = """
-#             INSERT OR REPLACE INTO Ticker 
-#             (Ticker, Date, Open, High, Low, Close, Change, "Change (%)", Volume) 
-#             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
-#         """
-
-#         # Prepare data for insertion
-#         data_to_insert = []
-#         for idx, record in enumerate(data, start=1):
-#             try:
-#                 logging.info(f"Processing record {idx}/{len(data)} for ticker '{ticker}': {record}")
-
-#                 # Map 'Date_' to 'Date'
-#                 date_str = record.get('Date_')
-#                 if not date_str:
-#                     error_msg = f"❌ 'Date_' field is missing in record {idx} for ticker '{ticker}'. Skipping record."
-#                     logging.error(error_msg)
-#                     errors.append(error_msg)
-#                     continue
-
-#                 # Attempt to parse and format the date
-#                 try:
-#                     # Handle ISO format dates
-#                     if 'T' in date_str:
-#                         parsed_date = datetime.strptime(date_str, '%Y-%m-%dT%H:%M:%S')
-#                     else:
-#                         # Handle other possible date formats if necessary
-#                         parsed_date = datetime.strptime(date_str, '%Y-%m-%d')
-#                     formatted_date = parsed_date.strftime('%d %b %Y')
-#                     logging.info(f"Formatted date for ticker '{ticker}': {formatted_date}")
-#                 except ValueError as ve:
-#                     error_msg = f"❌ Date format error for ticker '{ticker}' with date '{date_str}': {ve}. Skipping record."
-#                     logging.error(error_msg)
-#                     errors.append(error_msg)
-#                     continue
-
-#                 # Extract and clean numeric fields
-#                 open_ = record.get('Open')
-#                 high = record.get('High')
-#                 low = record.get('Low')
-#                 close = record.get('Close')
-#                 change = record.get('Change')
-#                 change_p = record.get('ChangeP')  # Assuming 'ChangeP' is always present
-#                 volume = record.get('Volume')
-
-#                 # Log extracted fields
-#                 logging.info(f"Extracted fields for ticker '{ticker}': Open={open_}, High={high}, Low={low}, Close={close}, Change={change}, ChangeP={change_p}, Volume={volume}")
-
-#                 # Data Cleaning: Ensure numeric fields are correctly formatted
-#                 def clean_numeric(value, field_name):
-#                     if isinstance(value, str):
-#                         cleaned_value = value.replace(',', '').strip()
-#                         logging.debug(f"Cleaned '{field_name}': '{value}' -> '{cleaned_value}'")
-#                         return cleaned_value
-#                     return value
-
-#                 open_ = clean_numeric(open_, 'Open')
-#                 high = clean_numeric(high, 'High')
-#                 low = clean_numeric(low, 'Low')
-#                 close = clean_numeric(close, 'Close')
-#                 change = clean_numeric(change, 'Change')
-#                 change_p = clean_numeric(change_p, 'ChangeP')
-#                 volume = clean_numeric(volume, 'Volume')
-
-#                 # Convert fields to appropriate data types
-#                 try:
-#                     open_ = float(open_)
-#                     high = float(high)
-#                     low = float(low)
-#                     close = float(close)
-#                     change = float(change)
-#                     change_p = round(float(change_p), 2)  # Round to two decimal places
-#                     volume = int(float(volume))  # Ensure volume is an integer
-#                 except ValueError as ve:
-#                     error_msg = f"❌ Data type conversion error for ticker '{ticker}' on date '{formatted_date}': {ve}. Skipping record."
-#                     logging.error(error_msg)
-#                     errors.append(error_msg)
-#                     continue
-
-#                 logging.info(f"Converted fields for ticker '{ticker}': Open={open_}, High={high}, Low={low}, Close={close}, Change={change}, ChangeP={change_p}, Volume={volume}")
-
-#                 # Append the cleaned and converted data as a tuple
-#                 data_to_insert.append((ticker, formatted_date, open_, high, low, close, change, change_p, volume))
-
-#             except Exception as e:
-#                 error_msg = f"❌ Unexpected error while processing record {idx} for ticker '{ticker}': {e}. Skipping record."
-#                 logging.exception(error_msg)
-#                 errors.append(error_msg)
-#                 continue
-
-#         if not data_to_insert:
-#             warning_msg = f"⚠️ No valid records to insert for ticker '{ticker}'."
-#             logging.warning(warning_msg)
-#             errors.append(warning_msg)
-#             return False, records_added, errors
-
-#         # Insert data in batches
-#         total_records = len(data_to_insert)
-#         logging.info(f"Starting database insertion for ticker '{ticker}' with {total_records} records.")
-
-#         for i in range(0, total_records, batch_size):
-#             batch = data_to_insert[i:i + batch_size]
-#             try:
-#                 cursor.executemany(insert_query, batch)
-#                 conn.commit()
-#                 records_added += cursor.rowcount
-#                 logging.info(f"Inserted batch {i//batch_size + 1}: {len(batch)} records for ticker '{ticker}'.")
-#             except sqlite3.Error as e:
-#                 error_msg = f"❌ Database insertion error for ticker '{ticker}' in batch {i//batch_size + 1}: {e}."
-#                 logging.error(error_msg)
-#                 errors.append(error_msg)
-#                 continue
-
-#             # Log the first three inserted records in this batch for verification
-#             if i == 0 and len(batch) >= 3:
-#                 logging.debug(f"First 3 records inserted for ticker '{ticker}': {batch[:3]}")
-
-#         logging.info(f"✅ Successfully inserted/updated {records_added} records for ticker '{ticker}'.")
-#         return True, records_added, errors
-
-#     except Exception as e:
-#         error_msg = f"❌ Failed to insert data into database for ticker '{ticker}': {e}"
-#         logging.exception(error_msg)
-#         errors.append(error_msg)
-#         return False, records_added, errors
-
-
 
 
 
@@ -1500,23 +1257,23 @@ def get_last_five_working_days(reference_date=None, num_days=5):
 
 
 
-def synchronize_database(conn, date_to, progress_bar=None, status_text=None, log_container=None):
+def synchronize_database(conn, date_to, progress_bar, status_text, log_container):
     """
-    Synchronizes the database by performing the following tasks in order:
+    Simplified synchronization of the database by performing the following tasks in order:
     1. Synchronizes PSX Constituents data.
     2. Inserts or updates Market Watch data.
-    3. Populates or updates the Ticker table based on existing data.
-
+    3. Cleans and repopulates the Ticker table.
+    
     If synchronization for the specified date fails, it will attempt the previous working day,
     up to a maximum of 5 attempts.
-
+    
     Args:
         conn (sqlite3.Connection): SQLite database connection.
         date_to (str): The date for which to synchronize data in 'dd MMM YYYY' format.
-        progress_bar (streamlit.progress): Streamlit progress bar object.
-        status_text (streamlit.empty): Streamlit empty object for status updates.
-        log_container (streamlit.container): Streamlit container for logs.
-
+        progress_bar (streamlit.progress, optional): Streamlit progress bar object.
+        status_text (streamlit.empty, optional): Streamlit empty object for status updates.
+        log_container (streamlit.container, optional): Streamlit container for logs.
+    
     Returns:
         dict: Summary of synchronization results with detailed messages.
     """
@@ -1609,150 +1366,85 @@ def synchronize_database(conn, date_to, progress_bar=None, status_text=None, log
             progress_bar.progress(0.30)  # 30%
             status_text.text("Market Watch synchronization failed.")
 
-    # ---- Task 3: Populate or Update Ticker Table ---- #
+    # ---- Task 3: Clean and Populate Ticker Table ---- #
     try:
         logging.info("Synchronizing tickers.")
         if log_container:
             log_container.write("🔄 Synchronizing tickers...")
 
-        # Check if Ticker table is empty
-        existing_tickers = get_unique_tickers_from_db(conn)
-        total_existing = len(existing_tickers)
-        logging.info(f"Retrieved {total_existing} tickers from the Ticker table.")
-
-        if total_existing == 0:
-            logging.info("Ticker table is empty. Performing initial population with all constituents.")
+        # Clean the Ticker table
+        if clean_ticker_table(conn):
+            logging.info("Ticker table has been cleaned.")
             if log_container:
-                log_container.write("ℹ️ Ticker table is empty. Populating with all constituents.")
-
-            # Use all constituents to populate the Ticker table
-            total_tickers = len(psx_data)
-            records_added_total = 0
-            errors = []
-
-            for idx, constituent in enumerate(psx_data, start=1):
-                ticker = constituent['SYMBOL'].upper()
-                logging.info(f"Populating ticker {ticker} ({idx}/{total_tickers})...")
-                if log_container:
-                    log_container.write(f"🔄 Populating ticker {ticker} ({idx}/{total_tickers})...")
-
-                # Fetch stock data for the ticker
-                raw_data = get_stock_data(ticker, "01 Jan 2020", current_date_to)
-
-                # Log the raw data fetched
-                if raw_data:
-                    logging.info(f"Fetched {len(raw_data)} records for ticker '{ticker}'.")
-                    logging.debug(f"First 3 records for ticker '{ticker}': {raw_data[:3]}...")
-                else:
-                    warning_msg = f"⚠️ No data fetched for ticker '{ticker}'. Skipping."
-                    logging.warning(warning_msg)
-                    errors.append(warning_msg)
-                    if log_container:
-                        log_container.warning(warning_msg)
-                    continue
-
-                # Insert ticker data into the database with enhanced logging
-                success, records_added, ticker_errors = insert_ticker_data_into_db(conn, raw_data, ticker)
-                if success:
-                    records_added_total += records_added
-                    logging.info(f"✅ Added {records_added} records for ticker '{ticker}'.")
-                    if log_container:
-                        log_container.success(f"✅ Added {records_added} records for ticker '{ticker}'.")
-                else:
-                    error_msg = f"❌ Failed to insert data for ticker '{ticker}'."
-                    logging.error(error_msg)
-                    errors.append(error_msg)
-                    if log_container:
-                        log_container.error(error_msg)
-
-                # Append any errors from the insert function
-                errors.extend(ticker_errors)
-
-                # Update progress
-                if progress_bar and status_text:
-                    progress = 0.30 + (idx / total_tickers) * 0.70  # Progress from 30% to 100%
-                    progress = min(progress, 1.0)  # Ensure it doesn't exceed 100%
-                    progress_bar.progress(progress)
-                    status_text.text(f"Synchronizing tickers: {idx}/{total_tickers} completed.")
-
-            # Finalize summary for tickers
-            summary['tickers']['success'] = len(errors) == 0
-            summary['tickers']['records_added'] = records_added_total
-            if summary['tickers']['success']:
-                summary['tickers']['message'] = f"✅ Initial population of Ticker table completed with {summary['tickers']['records_added']} records added."
-            else:
-                summary['tickers']['message'] = f"⚠️ Initial population completed with {summary['tickers']['records_added']} records added and {len(errors)} errors."
-            logging.info(summary['tickers']['message'])
-            if log_container:
-                if summary['tickers']['success']:
-                    log_container.success(summary['tickers']['message'])
-                else:
-                    log_container.warning(summary['tickers']['message'])
+                log_container.write("🧹 Ticker table has been cleaned.")
         else:
-            logging.info(f"Ticker table has {total_existing} existing tickers. Proceeding with updates.")
+            raise sqlite3.Error("Failed to clean the Ticker table.")
+
+        # Populate the Ticker table with new data
+        total_tickers = len(psx_data)
+        records_added_total = 0
+        errors = []
+
+        for idx, constituent in enumerate(psx_data, start=1):
+            ticker = constituent['SYMBOL'].upper()
+            logging.info(f"Populating ticker {ticker} ({idx}/{total_tickers})...")
             if log_container:
-                log_container.write(f"ℹ️ Ticker table has {total_existing} existing tickers. Proceeding with updates.")
+                log_container.write(f"🔄 Populating ticker '{ticker}' ({idx}/{total_tickers})...")
 
-            # Update existing tickers
-            records_added_total = 0
-            errors = []
-            for idx, ticker in enumerate(existing_tickers, start=1):
-                logging.info(f"Updating ticker {ticker} ({idx}/{total_existing})...")
+            # Fetch stock data for the ticker
+            raw_data = get_stock_data(ticker, "01 Jan 2020", current_date_to)
+
+            # Log the raw data fetched
+            if raw_data:
+                logging.info(f"Fetched {len(raw_data)} records for ticker '{ticker}'.")
+                logging.debug(f"First 3 records for ticker '{ticker}': {raw_data[:3]}...")
+            else:
+                warning_msg = f"⚠️ No data fetched for ticker '{ticker}'. Skipping."
+                logging.warning(warning_msg)
+                errors.append(warning_msg)
                 if log_container:
-                    log_container.write(f"🔄 Updating ticker {ticker} ({idx}/{total_existing})...")
+                    log_container.warning(warning_msg)
+                continue
 
-                # Fetch latest data for the ticker
-                raw_data = get_stock_data(ticker, "01 Jan 2000", current_date_to)
+            # Insert ticker data into the database using the unified function
+            success, records_added, ticker_errors = insert_ticker_data_into_db(conn, raw_data, ticker)
+            if success:
+                records_added_total += records_added
+                logging.info(f"✅ Added {records_added} records for ticker '{ticker}'.")
+                if log_container:
+                    log_container.success(f"✅ Added {records_added} records for ticker '{ticker}'.")
+            else:
+                error_msg = f"❌ Failed to insert data for ticker '{ticker}'."
+                logging.error(error_msg)
+                errors.append(error_msg)
+                if log_container:
+                    log_container.error(error_msg)
 
-                # Log the raw data fetched
-                if raw_data:
-                    logging.info(f"Fetched {len(raw_data)} records for ticker '{ticker}'.")
-                    logging.debug(f"First 3 records for ticker '{ticker}': {raw_data[:3]}...")
-                else:
-                    warning_msg = f"⚠️ No data fetched for ticker '{ticker}'. Skipping."
-                    logging.warning(warning_msg)
-                    errors.append(warning_msg)
-                    if log_container:
-                        log_container.warning(warning_msg)
-                    continue
-
-                # Insert ticker data into the database with enhanced logging
-                success, records_added, ticker_errors = insert_ticker_data_into_db(conn, raw_data, ticker)
-                if success:
-                    records_added_total += records_added
-                    logging.info(f"✅ Added {records_added} records for ticker '{ticker}'.")
-                    if log_container:
-                        log_container.success(f"✅ Added {records_added} records for ticker '{ticker}'.")
-                else:
-                    error_msg = f"❌ Failed to insert data for ticker '{ticker}'."
-                    logging.error(error_msg)
-                    errors.append(error_msg)
-                    if log_container:
-                        log_container.error(error_msg)
-
-                # Append any errors from the insert function
+            # Append any errors from the insert function
+            if ticker_errors:
                 errors.extend(ticker_errors)
 
-                # Update progress
-                if progress_bar and status_text:
-                    progress = 0.30 + (idx / total_existing) * 0.70  # Progress from 30% to 100%
-                    progress = min(progress, 1.0)  # Ensure it doesn't exceed 100%
-                    progress_bar.progress(progress)
-                    status_text.text(f"Synchronizing tickers: {idx}/{total_existing} completed.")
+            # Update progress
+            if progress_bar and status_text:
+                progress = 0.30 + (idx / total_tickers) * 0.70  # Progress from 30% to 100%
+                progress = min(progress, 1.0)  # Ensure it doesn't exceed 100%
+                progress_bar.progress(progress)
+                status_text.text(f"Synchronizing tickers: {idx}/{total_tickers} completed.")
 
-            # Finalize summary for tickers
-            summary['tickers']['success'] = len(errors) == 0
-            summary['tickers']['records_added'] = records_added_total
-            if summary['tickers']['success']:
-                summary['tickers']['message'] = f"✅ Synchronized existing tickers with {summary['tickers']['records_added']} new records added."
-            else:
-                summary['tickers']['message'] = f"⚠️ Synchronized existing tickers with {summary['tickers']['records_added']} new records added and {len(errors)} errors."
+        # Finalize summary for tickers
+        summary['tickers']['success'] = len(errors) == 0
+        summary['tickers']['records_added'] = records_added_total
+        if summary['tickers']['success']:
+            summary['tickers']['message'] = f"✅ Ticker table populated with {summary['tickers']['records_added']} records successfully."
             logging.info(summary['tickers']['message'])
             if log_container:
-                if summary['tickers']['success']:
-                    log_container.success(summary['tickers']['message'])
-                else:
-                    log_container.warning(summary['tickers']['message'])
+                log_container.success(summary['tickers']['message'])
+        else:
+            summary['tickers']['message'] = f"⚠️ Ticker table populated with {summary['tickers']['records_added']} records, but encountered {len(errors)} errors."
+            logging.info(summary['tickers']['message'])
+            if log_container:
+                log_container.warning(summary['tickers']['message'])
+
     except Exception as e:
         summary['tickers']['message'] = f"⚠️ Exception during Tickers synchronization: {str(e)}"
         logging.exception(summary['tickers']['message'])
@@ -1761,9 +1453,8 @@ def synchronize_database(conn, date_to, progress_bar=None, status_text=None, log
         if progress_bar and status_text:
             progress_bar.progress(1.0)  # 100%
             status_text.text("Tickers synchronization failed.")
+
     return summary
-
-
 
 
 

@@ -7,7 +7,9 @@
     |-- __pycache__
         |-- mxwll_suite_indicator.cpython-310.pyc
         |-- mxwll_suite_indicator.cpython-312.pyc
+|-- app.log
 |-- data
+    |-- tick_data.db
 |-- databasestructure.py
 |-- database_structure_and_samples.txt
 |-- functionalities

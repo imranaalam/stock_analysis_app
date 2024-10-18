@@ -313,6 +313,11 @@ def analyze_tickers(conn):
                             low_aoi = summary.get('Lowest AOI (Green)')
                             last_close = df['Close'].iloc[-1]
 
+                            if low_aoi == 0:
+                                st.error(f"Low AOI for ticker '{ticker}' is zero, cannot calculate distance.")
+                                logging.error(f"Low AOI for ticker '{ticker}' is zero, cannot calculate distance.")
+                                continue
+
                             # Calculate Potential Profit (%) based on High_AOI
                             potential_profit = ((high_aoi - last_close) / high_aoi) * 100 if high_aoi else None
 
@@ -320,15 +325,24 @@ def analyze_tickers(conn):
                             df['Return'] = df['Close'].pct_change()
                             volatility = df['Return'].std() * np.sqrt(252)  # Annualized volatility
 
+                            # Calculate Distance from Close to Low AOI (Percentage)
+                            distance_percentage = ((last_close - low_aoi) / low_aoi) * 100 if low_aoi else None
+
+                            # Calculate Range (TP - SL)
+                            range_value = high_aoi - low_aoi if high_aoi and low_aoi else None
+
                             # Append to comparison metrics if calculation was successful
-                            if (potential_profit is not None):
+                            if (potential_profit is not None) and (distance_percentage is not None) and (range_value is not None):
                                 comparison_metrics.append({
                                     'Ticker': ticker,
-                                    'High_AOI': high_aoi,
-                                    'Last Close': last_close,
-                                    'Potential Profit (%)': round(potential_profit, 2),
+                                    'SL': round(low_aoi, 2),
+                                    'TP': round(high_aoi, 2),
+                                    'Close': round(last_close, 2),
+                                    'Dist (%)': round(distance_percentage, 2),  # Percentage distance
+                                    'Range': round(range_value, 2),  # Range between TP and SL
+                                    'Profit (%)': round(potential_profit, 2),
+                                    'Vol': df['Volume'].iloc[-1],
                                     'Volatility': round(volatility, 2),
-                                    'Volume': df['Volume'].iloc[-1],
                                     'Listed_in': listed_in  # Include listed_in
                                 })
                             else:
@@ -343,54 +357,113 @@ def analyze_tickers(conn):
                     st.error(f"An error occurred during analysis for ticker '{ticker}': {e}")
                     logging.error(f"Error during analysis for ticker '{ticker}': {e}")
 
-        # --- Generate Scatter Plot After All Analyses ---
+        # --- Remove "📊 Potential Profit Data" Table ---
+        # Removed as per your request
+
+        # --- Generate Charts and Tables After All Analyses ---
 
         if comparison_metrics:
-            st.subheader("📈 Potential Profit Scatter Plot")
             comparison_df = pd.DataFrame(comparison_metrics).drop_duplicates(subset=['Ticker'])
 
-            # Scatter Plot: Potential Profit (%) vs High_AOI with Volume as Size
-            fig_scatter = px.scatter(
-                comparison_df,
-                x='High_AOI',
-                y='Potential Profit (%)',
-                color='Listed_in',
-                size='Volume',
-                hover_data=['Last Close'],
-                text='Ticker',
-                title='Potential Profit (%) vs High AOI with Volume',
-                labels={
-                    'High_AOI': 'High AOI',
-                    'Potential Profit (%)': 'Potential Profit (%)',
-                    'Listed_in': 'Index',
-                    'Volume': 'Volume'
-                },
-                size_max=15
+            # --- Add Another Chart Favoring Low Dist, High Profit %, More Volume, Less Volatility ---
+            # Calculate a composite score
+            # Normalize the metrics
+            comparison_df['Norm_Dist'] = 1 - (comparison_df['Dist (%)'] - comparison_df['Dist (%)'].min()) / (comparison_df['Dist (%)'].max() - comparison_df['Dist (%)'].min()) if comparison_df['Dist (%)'].max() != comparison_df['Dist (%)'].min() else 1
+            comparison_df['Norm_Profit'] = (comparison_df['Profit (%)'] - comparison_df['Profit (%)'].min()) / (comparison_df['Profit (%)'].max() - comparison_df['Profit (%)'].min()) if comparison_df['Profit (%)'].max() != comparison_df['Profit (%)'].min() else 1
+            comparison_df['Norm_Vol'] = (comparison_df['Vol'] - comparison_df['Vol'].min()) / (comparison_df['Vol'].max() - comparison_df['Vol'].min()) if comparison_df['Vol'].max() != comparison_df['Vol'].min() else 1
+            comparison_df['Norm_Volatility'] = 1 - (comparison_df['Volatility'] - comparison_df['Volatility'].min()) / (comparison_df['Volatility'].max() - comparison_df['Volatility'].min()) if comparison_df['Volatility'].max() != comparison_df['Volatility'].min() else 1
+
+            # Assign weights to each normalized metric
+            weights = {
+                'Norm_Dist': 0.4,        # Higher weight for Dist
+                'Norm_Profit': 0.3,      # Next for Profit
+                'Norm_Vol': 0.2,          # Then Volume
+                'Norm_Volatility': 0.1   # Least for Volatility
+            }
+
+            # Calculate composite score
+            comparison_df['Composite_Score'] = (
+                comparison_df['Norm_Dist'] * weights['Norm_Dist'] +
+                comparison_df['Norm_Profit'] * weights['Norm_Profit'] +
+                comparison_df['Norm_Vol'] * weights['Norm_Vol'] +
+                comparison_df['Norm_Volatility'] * weights['Norm_Volatility']
             )
 
-            # Enhance the plot with text labels
-            fig_scatter.update_traces(textposition='top center')
-            fig_scatter.update_layout(showlegend=True)
+            # Scatter Plot: Composite Score vs Ticker
+            # Favoring: High Composite Score
+            fig_favor = px.scatter(
+                comparison_df,
+                x='Ticker',
+                y='Composite_Score',
+                size='Vol',
+                color='Composite_Score',
+                hover_data=['Dist (%)', 'Profit (%)', 'Vol', 'Volatility'],
+                text='Ticker',
+                title='Favoring Stocks: Low Dist, High Profit %, More Volume, Less Volatility',
+                labels={
+                    'Ticker': 'Ticker',
+                    'Composite_Score': 'Composite Score'
+                },
+                size_max=15,
+                color_continuous_scale='RdYlGn'  # Red to Yellow to Green
+            )
 
-            st.plotly_chart(fig_scatter, use_container_width=True)
+            fig_favor.update_traces(textposition='top center')
+            fig_favor.update_layout(showlegend=True)
 
-            # Display the DataFrame used for the scatter plot
-            st.subheader("📊 Potential Profit Data")
-            st.dataframe(comparison_df[['Ticker', 'High_AOI', 'Last Close', 'Potential Profit (%)', 'Volatility', 'Volume', 'Listed_in']])
+            # --- Remove "📈 Potential Profit Scatter Plot" ---
+            # Removed as per your request
 
-            # Export comparison results as CSV
-            csv = comparison_df.to_csv(index=False).encode('utf-8')
+            # --- Arrange the New Favoring Chart Beside Any Other Chart if Needed ---
+            # Since the "Potential Profit Scatter Plot" is removed, we'll only display the new chart.
+
+            # --- Display the New Favoring Chart ---
+            st.subheader("📈 Favoring Stocks Chart")
+            st.plotly_chart(fig_favor, use_container_width=True)
+
+            # --- Additional Functionality: Table Sorted by Percentage Distance ---
+
+            st.subheader("📋 Stocks Closest to Lowest Floor")
+
+            # Sort the DataFrame by 'Dist (%)' ascending to have closest stocks on top
+            sorted_comparison_df = comparison_df.sort_values(by='Dist (%)').reset_index(drop=True)
+
+            # Select and rename columns as per requirement
+            distance_table = sorted_comparison_df[['Ticker', 'SL', 'TP', 'Close', 'Dist (%)', 'Range', 'Profit (%)', 'Vol', 'Volatility']].copy()
+            distance_table.rename(columns={
+                'SL': 'SL',
+                'TP': 'TP',
+                'Close': 'Close',
+                'Dist (%)': 'Dist',
+                'Range': 'Range',
+                'Profit (%)': 'Profit (%)',
+                'Vol': 'Vol',
+                'Volatility': 'Volatility'
+            }, inplace=True)
+
+            # Display the table
+            st.dataframe(distance_table)
+
+            # --- Export the distance sorted table as CSV with Date in Filename ---
+
+            csv_distance = distance_table.to_csv(index=False).encode('utf-8')
+            csv_filename = f"TAKE PROFIT AND STOP LOSS FOR THE LATEST DATE {end_date.strftime('%Y-%m-%d')}.csv"
             st.download_button(
-                label="📥 Download Comparison Data as CSV",
-                data=csv,
-                file_name='comparison_metrics.csv',
+                label="📥 Download Distance Sorted Data as CSV",
+                data=csv_distance,
+                file_name=csv_filename,
                 mime='text/csv',
             )
 
-            # Highlight the stock with the highest potential profit
-            top_stock = comparison_df.loc[comparison_df['Potential Profit (%)'].idxmax()]
-            st.success(f"**Top Performer:** {top_stock['Ticker']} with a potential profit of {top_stock['Potential Profit (%)']:.2f}% and volatility of {top_stock['Volatility']}%")
-        else:
-            st.warning("No comparison metrics available to generate the scatter plot.")
-            logging.warning("No comparison metrics available after analysis.")
+            # --- Display Top 5 Performers ---
+            st.subheader("🏆 Top 5 Performers")
 
+            # Sort by Profit (%) descending to get top performers
+            top_performers = comparison_df.sort_values(by='Profit (%)', ascending=False).head(5)
+
+            for index, row in top_performers.iterrows():
+                st.success(f"**Top Performer:** {row['Ticker']} with a potential profit of {row['Profit (%)']:.2f}% and volatility of {row['Volatility']}%")
+
+        else:
+            st.warning("No comparison metrics available to generate the charts and tables.")
+            logging.warning("No comparison metrics available after analysis.")

@@ -5,6 +5,8 @@
 |-- analysis
     |-- mxwll_suite_indicator.py
     |-- __pycache__
+        |-- backtest.cpython-312.pyc
+        |-- backtest_strategy.cpython-312.pyc
         |-- mxwll_suite_indicator.cpython-310.pyc
         |-- mxwll_suite_indicator.cpython-312.pyc
 |-- app.log
@@ -46,3 +48,5 @@
         |-- helpers.cpython-312.pyc
         |-- logger.cpython-312.pyc
         |-- __init__.cpython-312.pyc
+|-- __pycache__
+    |-- backtest.cpython-312.pyc

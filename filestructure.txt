@@ -27,6 +27,7 @@
         |-- __init__.cpython-312.pyc
 |-- main.py
 |-- requirements.txt
+|-- stock_data.db
 |-- tests
     |-- data
     |-- tests
